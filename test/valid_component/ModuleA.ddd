@@ -1,0 +1,16 @@
+{
+    "component": {
+        "componentvariables": [
+            {
+                "VariableA": {
+                    "type": "output"
+                }
+            },
+            {
+                "VariableB": {
+                    "type": "input"
+                }
+            }
+        ]
+    }
+}

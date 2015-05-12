@@ -1,0 +1,17 @@
+{
+    "component":{ 
+        "componentvariables": [
+            {
+                "VariableA": {
+                    "type": "output"
+                }
+            },
+            {
+                "VariableB": {
+                    "type": "input"
+                }
+            }
+        ],
+"invalid_key":1
+    }
+}
