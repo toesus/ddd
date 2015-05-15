@@ -2,13 +2,13 @@
     "component": {
         "variable": [
             {
-                "VariableA": {
-                    "type": "output"
+                "VariableC": {
+                    "type": "local"
                 }
             },
             {
                 "VariableB": {
-                    "type": "input"
+                    "type": "output"
                 }
             }
         ]

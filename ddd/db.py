@@ -84,32 +84,30 @@ class DB:
     def load(self,path):
         print "Loading DDD DB"
         self.root_folder = path
-        list = glob.glob(path+'/*.ddd')
-        if len(list)==0:
+        flist = glob.glob(path+'/*.ddd')
+        if len(flist)==0:
             print "No .ddd file found in: "+path
             return
-        elif len(list)>1:
+        elif len(flist)>1:
             print "Multiple .ddd files found in: "+path
             print "The root-level of a DDD db should contain only one file"
             return
         else:
-            print "Found file: "+list[0]
-            name,res=self.handler.load(list[0])
+            print "Found file: "+flist[0]
+            name,res=self.handler.load(flist[0])
             level = res.keys()[0]
             
             print "object name: "+name
             print "it is a type: "+level
             
-            if level=='project':
-                #self.load_project(self,list[0])
-                self.recload(res,name,path)
-            elif level == 'component':
-                #self.load_component(list[0])
+            if level=='project' or level == 'component':
                 self.recload(res,name,path)
                 
             elif level == 'variable':
                 print "Loading of single variables is not supported"  
-            
+    
+    def check(self):
+        print "Checking current Project"        
     def dump(self, object,path=None):
         if path == None:
             path = self.root_folder
