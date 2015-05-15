@@ -10,6 +10,11 @@
                 "VariableB": {
                     "type": "output"
                 }
+            },
+            {
+                "VariableD": {
+                    "type": "input"
+                }
             }
         ]
     }

@@ -35,6 +35,8 @@ def main():
         print t + ':'
         for o in db.name_by_hash[t]:
             print o+' : '+db.name_by_hash[t][o]
+    
+    db.check()
             
 if __name__ == "__main__":
     main()

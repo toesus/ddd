@@ -27,7 +27,7 @@ class DB:
     def recload(self,data,name,path):
         objname = data.keys()[0]
         print "Recursively Loading "+objname
-        new_data = {objname:{}}
+        new_data = {}
         for key in data[objname]:
             # check if the key is one of the "reserved" ddd types
             # if yes, it has to be treated as a reference
@@ -35,12 +35,12 @@ class DB:
                 #print "Object Found: "+key
                 if type(data[objname][key]) == type({}):
                     # It is an inlined Object, we can directly load the referenced object
-                    new_data[objname][key] = self.recload(data[objname],'',path)
+                    new_data[key] = self.recload(data[objname],'',path)
                 elif type( data[objname][key]) == type(''):
                     print 'Reference FK: '+key
                 elif type( data[objname][key]) == type([]):
                     #print "Many-To-Many: "+key
-                    new_data[objname][key]=[]
+                    new_data[key]=[]
                     for ref in data[objname][key]:
                         if type(ref)==type(u""):
                             tmpname = ref
@@ -52,34 +52,28 @@ class DB:
                         tmpname,res=self.handler.load(fname)
                         tmphash = self.recload(res,tmpname,os.path.dirname(fname))
                         if type(ref)==type(u""):
-                            new_data[objname][key].append(tmphash)
+                            new_data[key].append(tmphash)
                         else:
-                            new_data[objname][key].append({tmphash:ref[tmpname]})
+                            new_data[key].append({tmphash:ref[tmpname]})
                         
                         #del new_data[objname][key][ref]
                         #ref[tmphash]=ref.pop(tmpname)
             else:
                 print key + ': '+ data[objname][key]
-                new_data[objname][key]=data[objname][key]
+                new_data[key]=data[objname][key]
         
         print "Calculating Hash on:"
-        hashstring=json.dumps({name:new_data[objname]},sort_keys=True)
+        hashstring=json.dumps({name:{objname:new_data}},sort_keys=True)
         print hashstring
         tmphash=hashlib.sha1(hashstring).hexdigest()
         print 'Creating '+objname
         self.name_by_hash[objname][tmphash]=name
-        self.object_by_hash[objname][tmphash]=data
+        self.object_by_hash[objname][tmphash]=new_data
         #self.objectnames[objname].create(**data[objname])
         #TODO: Add to DB-Lists
         return tmphash
         
     
-    # return a ddd_object corresponding to the name or hash
-    # if both arguments are given, both have to match
-    def getComponent(self,name=None,hash=None):
-        d = Component.get(name=name)
-        
-        return d
             
     def load(self,path):
         print "Loading DDD DB"
@@ -97,9 +91,6 @@ class DB:
             name,res=self.handler.load(flist[0])
             level = res.keys()[0]
             
-            print "object name: "+name
-            print "it is a type: "+level
-            
             if level=='project' or level == 'component':
                 self.recload(res,name,path)
                 
@@ -107,7 +98,34 @@ class DB:
                 print "Loading of single variables is not supported"  
     
     def check(self):
-        print "Checking current Project"        
+        print "Checking current Project"
+        e = 0   
+        hash_by_name = {}
+        for v in self.name_by_hash['variable']:
+            if hash_by_name.has_key(self.name_by_hash['variable'][v]):
+                print "Inconsistent Versions used for: "+self.name_by_hash['variable'][v]
+                e+=1
+            hash_by_name[self.name_by_hash['variable'][v]]=v
+        
+        vartype_by_name = {}
+        for c in self.object_by_hash['component']:
+            for v in self.object_by_hash['component'][c]['variable']:
+                if not vartype_by_name.has_key(self.name_by_hash['variable'][v.keys()[0]]):
+                    vartype_by_name[self.name_by_hash['variable'][v.keys()[0]]]={'input':[],'output':[],'local':[]}
+                vartype_by_name[self.name_by_hash['variable'][v.keys()[0]]][v[v.keys()[0]]['type']].append(c)
+              
+        for t in vartype_by_name:
+            if len(vartype_by_name[t]['output'])>1:
+                print "Multiple Outputs for: "+self.name_by_hash['variable'][t]+" in Components: "+str(vartype_by_name[t]['output'])
+                e+=1
+            if len(vartype_by_name[t]['input'])>0:
+                if len(vartype_by_name[t]['output'])==0:
+                    e+=1
+                    print "Input with no Output for "+t+" in Components: "+str(map(lambda x: self.name_by_hash['component'][x],vartype_by_name[t]['input']))     
+        if e>0:
+            print "Project is not consistent, "+str(e)+" errors found"
+        else:
+            print "Project is consistent"
     def dump(self, object,path=None):
         if path == None:
             path = self.root_folder
