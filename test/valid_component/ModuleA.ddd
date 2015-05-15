@@ -1,6 +1,6 @@
 {
     "component": {
-        "componentvariables": [
+        "variable": [
             {
                 "VariableA": {
                     "type": "output"
