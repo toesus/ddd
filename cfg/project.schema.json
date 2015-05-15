@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "object",
+      "properties": {
+        "component": {
+        }
+      },
+      "required": [
+        "component"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "project"
+  ],
+  "additionalProperties": false
+}
