@@ -17,14 +17,14 @@ class DB:
     
     def __init__(self):
        
-        self.objectnames = {'variable':None,'datatype':None}
+        self.objectnames = {'variable':'/variables/','datatype':None,'project':None,'component':'/*/'}
         
         self.handler = Handler()
         
-        self.object_by_hash = {'variable':{},'component':{},'datatype':{}}
-        self.name_by_hash = {'variable':{},'component':{},'datatype':{}}
+        self.object_by_hash = {'variable':{},'component':{},'datatype':{},'project':{}}
+        self.name_by_hash = {'variable':{},'component':{},'datatype':{},'project':{}}
     
-    def recload(self,data,name):
+    def recload(self,data,name,path):
         objname = data.keys()[0]
         print "Recursively Loading "+objname
         new_data = {objname:{}}
@@ -35,18 +35,27 @@ class DB:
                 #print "Object Found: "+key
                 if type(data[objname][key]) == type({}):
                     # It is an inlined Object, we can directly load the referenced object
-                    new_data[objname][key] = self.recload(data[objname],'')
+                    new_data[objname][key] = self.recload(data[objname],'',path)
                 elif type( data[objname][key]) == type(''):
                     print 'Reference FK: '+key
                 elif type( data[objname][key]) == type([]):
                     #print "Many-To-Many: "+key
                     new_data[objname][key]=[]
                     for ref in data[objname][key]:
-                        tmpname=ref.keys()[0]
-                        fname = os.path.join(self.root_folder,'variables',tmpname+'.ddd')
+                        if type(ref)==type(u""):
+                            tmpname = ref
+                        else:
+                            tmpname=ref.keys()[0]
+                        flist = glob.glob(path+self.objectnames[key]+tmpname+'.ddd')
+                        if len(flist)!=0:
+                            fname = os.path.join(flist[0])
                         tmpname,res=self.handler.load(fname)
-                        tmphash = self.recload(res,tmpname)
-                        new_data[objname][key].append({tmphash:ref[tmpname]})
+                        tmphash = self.recload(res,tmpname,os.path.dirname(fname))
+                        if type(ref)==type(u""):
+                            new_data[objname][key].append(tmphash)
+                        else:
+                            new_data[objname][key].append({tmphash:ref[tmpname]})
+                        
                         #del new_data[objname][key][ref]
                         #ref[tmphash]=ref.pop(tmpname)
             else:
@@ -93,10 +102,10 @@ class DB:
             
             if level=='project':
                 #self.load_project(self,list[0])
-                print "projects not supported yet"
+                self.recload(res,name,path)
             elif level == 'component':
                 #self.load_component(list[0])
-                self.recload(res,name)
+                self.recload(res,name,path)
                 
             elif level == 'variable':
                 print "Loading of single variables is not supported"  

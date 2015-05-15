@@ -55,7 +55,7 @@ class Handler:
                     schema = json.load(fp)
                     jsonschema.Draft4Validator.check_schema(schema)
             except IOError as e:
-                print "ddd-json: Error when reading "+filename
+                print "ddd-json: Error when reading "+f
                 print str(e)        
             except jsonschema.SchemaError as e:
                 print "ddd-json schema is not valid"
