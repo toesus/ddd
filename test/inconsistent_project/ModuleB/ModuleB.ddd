@@ -1,0 +1,16 @@
+{
+    "component": {
+        "variable": [
+            {
+                "VariableC": {
+                    "type": "local"
+                }
+            },
+            {
+                "VariableB": {
+                    "type": "output"
+                }
+            }
+        ]
+    }
+}
