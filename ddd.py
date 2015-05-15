@@ -14,14 +14,16 @@ def main():
     
     # Setup argument parser
     parser = ArgumentParser()
-    parser.add_argument("-c", "--check", dest="check", action="store_true", help="Check the DDD Project")
+    subparsers = parser.add_subparsers(help='Supported Subcommands',dest='subcommand')
+    parser_c = subparsers.add_parser('check', help='Check the DDD Project for consistency')
     parser.add_argument(dest="paths", help="Path to root folder of DDD Repository", metavar="path", nargs='+')
-
+    
+    
     # Process arguments
     args = parser.parse_args()
     
     paths = args.paths
-    check = args.check
+    
     db = DB()
     
     print "Load component from "+paths[0]
@@ -36,7 +38,8 @@ def main():
         for o in db.name_by_hash[t]:
             print o+' : '+db.name_by_hash[t][o]
     
-    db.check()
+    if args.subcommand=='check':
+        db.check()
             
 if __name__ == "__main__":
     main()
