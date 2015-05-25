@@ -3,6 +3,7 @@ import json
 from ddd.file import Handler
 import hashlib
 import os
+import pystache
 
 class DataObject:
     def __init__(self,data):
@@ -126,6 +127,20 @@ class DB:
             print "Project is not consistent, "+str(e)+" errors found"
         else:
             print "Project is consistent"
+    
+    def view(self,path='.'):
+        print "Viewing Repository..."
+        r = pystache.Renderer(search_dirs='./cfg/templates')
+        
+        viewerdata={}
+        for objecttype in self.object_by_hash:
+            tmp_list=[]
+            for obj in self.object_by_hash[objecttype]:
+                tmp_list.append({'hash':obj,'name':self.name_by_hash[objecttype][obj]})
+            viewerdata.update({objecttype:tmp_list})
+        with open('viewer.html','w') as fp:
+            fp.write(r.render_name('viewer.html',viewerdata))
+        
     def dump(self, object,path=None):
         if path == None:
             path = self.root_folder

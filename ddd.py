@@ -16,11 +16,13 @@ def main():
     parser = ArgumentParser()
     subparsers = parser.add_subparsers(help='Supported Subcommands',dest='subcommand')
     parser_c = subparsers.add_parser('check', help='Check the DDD Project for consistency')
+    parser_v = subparsers.add_parser('view', help='Display the DDD Repository in a html page')
     parser.add_argument(dest="paths", help="Path to root folder of DDD Repository", metavar="path", nargs='+')
     
     
     # Process arguments
     args = parser.parse_args()
+    print str(args)
     
     paths = args.paths
     
@@ -40,6 +42,8 @@ def main():
     
     if args.subcommand=='check':
         db.check()
+    elif args.subcommand=='view':
+        db.view()
             
 if __name__ == "__main__":
     main()
