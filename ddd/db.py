@@ -24,6 +24,7 @@ class DB:
         
         self.object_by_hash = {'variable':{},'component':{},'datatype':{},'project':{}}
         self.name_by_hash = {'variable':{},'component':{},'datatype':{},'project':{}}
+        self.wc_by_hash = {'variable':{},'component':{},'datatype':{},'project':{}}
     
     def recload(self,data,name,path):
         objname = data.keys()[0]
@@ -70,6 +71,7 @@ class DB:
         print 'Creating '+objname
         self.name_by_hash[objname][tmphash]=name
         self.object_by_hash[objname][tmphash]=new_data
+        self.wc_by_hash[objname][tmphash]=1
         #self.objectnames[objname].create(**data[objname])
         #TODO: Add to DB-Lists
         return tmphash
@@ -93,6 +95,10 @@ class DB:
             level = res.keys()[0]
             
             if level=='project' or level == 'component':
+                with open(os.path.join('repo','repo.ddd'),'r') as fp:
+                    tmp = json.load(fp)
+                    self.name_by_hash.update(tmp['names'])
+                    self.object_by_hash.update(tmp['objects'])
                 self.recload(res,name,path)
                 
             elif level == 'variable':
@@ -127,6 +133,7 @@ class DB:
             print "Project is not consistent, "+str(e)+" errors found"
         else:
             print "Project is consistent"
+        return e
     
     def view(self,path='.'):
         print "Viewing Repository..."
@@ -136,11 +143,19 @@ class DB:
         for objecttype in self.object_by_hash:
             tmp_list=[]
             for obj in self.object_by_hash[objecttype]:
-                tmp_list.append({'hash':obj,'name':self.name_by_hash[objecttype][obj]})
+                tmp_list.append({'hash':obj,'name':self.name_by_hash[objecttype][obj],'wc':self.wc_by_hash[objecttype].get(obj,False)})
             viewerdata.update({objecttype:tmp_list})
         with open('viewer.html','w') as fp:
             fp.write(r.render_name('viewer.html',viewerdata))
-        
+    
+    def commit(self,path='repo'):
+        print "Commiting to local repository..."
+        with open(os.path.join(path,'repo.ddd'),'w') as fp:
+            json.dump({'names':self.name_by_hash,'objects':self.object_by_hash},fp,indent=4,sort_keys=True)
+    
+    def init(self,path='repo'):
+        print "Initializing repoisitory structure in "+path+" ..."
+            
     def dump(self, object,path=None):
         if path == None:
             path = self.root_folder

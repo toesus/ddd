@@ -17,6 +17,7 @@ def main():
     subparsers = parser.add_subparsers(help='Supported Subcommands',dest='subcommand')
     parser_c = subparsers.add_parser('check', help='Check the DDD Project for consistency')
     parser_v = subparsers.add_parser('view', help='Display the DDD Repository in a html page')
+    parser_commit = subparsers.add_parser('commit', help='Commit the DDD Object(s) to a local repository')
     parser.add_argument(dest="paths", help="Path to root folder of DDD Repository", metavar="path", nargs='+')
     
     
@@ -44,6 +45,11 @@ def main():
         db.check()
     elif args.subcommand=='view':
         db.view()
+    elif args.subcommand=='commit':
+        if db.check()==0:
+            db.commit()
+        else:
+            print "Project is not consistent, committing not allowed"
             
 if __name__ == "__main__":
     main()
