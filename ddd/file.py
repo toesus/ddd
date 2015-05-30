@@ -27,6 +27,7 @@ class File:
         else:
             print "ddd-json: Loaded "+filename
             self.name = os.path.splitext(os.path.basename(filename))[0]
+            self.filename = os.path.abspath(filename)
             
             
     def dump(self,filename):
@@ -63,11 +64,10 @@ class Handler:
             else:
                 self.validators[name] = jsonschema.Draft4Validator(schema)
                 
-    def load(self,filename):
+    def load(self,filename,expected_type=None):
         
         dddj = File()
         dddj.load(filename)
-        print dddj.name
         dddtype = dddj.dict.keys()[0]
         errormsg = []
         if self.validators.has_key(dddtype):
@@ -84,5 +84,6 @@ class Handler:
                 print e.message 
         
         else:
-            return dddj.name,dddj.dict
+            print dddj.filename
+            return dddj.name,dddtype,dddj.dict[dddtype],dddj.filename
              

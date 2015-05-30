@@ -4,33 +4,26 @@ from ddd.file import Handler
 import hashlib
 import os
 import pystache
-
-class DataObject:
-    def __init__(self,data):
-        self.data=data
-    def __hash__(self):
-        return hash(json.dumps(self.data,sort_keys=True))
-    def __eq__(self,other):
-        return self.data == other.data
-
+from fileinput import filename
+from collections import defaultdict
 
 class DB:
     
     def __init__(self):
        
-        self.objectnames = {'variable-list':None,'variable':'/variables/','datatype':None,'project':None,'component':'/*/'}
+        self.objectnames = {'variable-list':None,'variable':'variables/','datatype':None,'project':None,'component':'*/'}
         
         self.handler = Handler()
         
         self.objects = {}
         self.tree = {}
-        #self.object_by_hash = {}#{'variable':{},'component':{},'datatype':{},'project':{}}
+        self.wc_files = defaultdict(list)
     
-    def recload(self,data,name,path):
-        objtype = data.keys()[0]
+    def recload(self,objtype,data,name,filename):
+        #objtype = data.keys()[0]
         print "Recursively Loading "+objtype
         new_data = {}
-        for key,value in data[objtype].iteritems():
+        for key,value in data.iteritems():
             # check if the key is one of the "reserved" ddd types
             # if yes, it has to be treated as a reference
             if self.objectnames.has_key(key):
@@ -41,17 +34,15 @@ class DB:
                 for listvalue in value:
                     if type(listvalue) == type({}):
                         # It is an inlined Object, we can directly load the referenced object
-                        new_data[key].append(self.recload({key:listvalue},'',path))
+                        new_data[key].append(self.recload(key,listvalue,'',filename))
                     elif type( listvalue) == type(u''):
-                        print 'Reference FK: '+key
-                        flist = glob.glob(path+self.objectnames[key]+listvalue+'.ddd')
-                        if len(flist)!=0:
-                            fname = os.path.join(flist[0])
-                        tmpname,res=self.handler.load(fname)
-                        tmphash = self.recload(res,listvalue,os.path.dirname(fname))
+                        tmpsearch=os.path.join(os.path.split(filename)[0],self.objectnames[key],listvalue+'.ddd')
+                        fname = glob.glob(tmpsearch)
+                        if len(fname)==0:
+                            raise Exception('The file '+tmpsearch+' does not exist!')
+                        tmpname,tmptype,res,tmpfilename=self.handler.load(fname[0],expected_type=key)
+                        tmphash = self.recload(tmptype,res,tmpname,fname[0])
                         new_data[key].append(tmphash)
-                    elif type( listvalue) == type([]):
-                        raise Exception('oioioioio')
             else:
                 print key + ': '+ value
                 new_data[key]=value
@@ -69,8 +60,9 @@ class DB:
            'parent':None}
         thash=hashlib.sha1(json.dumps(t,sort_keys=True)).hexdigest()
         self.tree[thash]=t
-        #self.objectnames[objtype].create(**data[objtype])
-        #TODO: Add to DB-Lists
+        
+        self.wc_files[thash].append(filename)
+        
         return thash
         
     
@@ -88,8 +80,7 @@ class DB:
             return
         else:
             print "Found file: "+flist[0]
-            name,res=self.handler.load(flist[0])
-            level = res.keys()[0]
+            name,level,res,filename=self.handler.load(flist[0])
             
             if level=='project' or level == 'component':
                 if os.path.isfile(os.path.join('repo','repo.ddd')):
@@ -97,7 +88,7 @@ class DB:
                         tmp = json.load(fp)
                         self.objects.update(tmp['objects'])
                         self.tree.update(tmp['tree'])
-                return self.recload(res,name,path)
+                return self.recload(level,res,name,flist[0])
                 
             elif level == 'variable':
                 print "Loading of single variables is not supported"  
@@ -173,12 +164,5 @@ class DB:
     
     def init(self,path='repo'):
         print "Initializing repoisitory structure in "+path+" ..."
-            
-    def dump(self, object,path=None):
-        if path == None:
-            path = self.root_folder
-        #object.dump(path)
-        print object.name
-        for d in Variable.select():
-            print d.name
+        
     
