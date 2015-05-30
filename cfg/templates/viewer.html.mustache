@@ -4,21 +4,13 @@
 <title>Page Title</title>
 </head>
 <body>
-
-<h1>Projects</h1>
-{{#project}}
+{{#types}}
+<h1>{{type}}</h1>
+{{#objects}}
 {{hash}} - {{name}} {{#wc}}WC{{/wc}} </br>
-{{/project}}
-
-<h1>Components</h1>
-{{#component}}
-{{hash}} - {{name}} {{#wc}}WC{{/wc}} </br>
-{{/component}}
-
-<h1>Variables</h1>
-{{#variable}}
-{{hash}} - {{name}} {{#wc}}WC{{/wc}} </br>
-{{/variable}}
-
+<pre>{{raw}}</pre>
+</br>
+{{/objects}}
+{{/types}}
 </body>
 </html> 

@@ -31,22 +31,24 @@ def main():
     
     print "Load component from "+paths[0]
     #db.load('db/dumptest')
-    db.load(paths[0])
+    h=db.load(paths[0])
     
     print "Loaded..."
-    print ""
+    print h
     
-    for t in db.name_by_hash:
+    for t in db.objectnames:
         print t + ':'
-        for o in db.name_by_hash[t]:
-            print o+' : '+db.name_by_hash[t][o]
+        for o in [x for x in db.tree.keys() if db.tree[x]['type']==t ]:
+        #for o in map(lambda x: x if db.object_by_hash[x].keys()[0]==t else None ,db.object_by_hash.keys()):
+            if o:
+                print o+' : '+db.tree[o]['name']
     
     if args.subcommand=='check':
-        db.check()
+        db.check(h)
     elif args.subcommand=='view':
         db.view()
     elif args.subcommand=='commit':
-        if db.check()==0:
+        if db.check(h)==0:
             db.commit()
         else:
             print "Project is not consistent, committing not allowed"

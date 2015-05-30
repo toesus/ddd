@@ -4,11 +4,11 @@
     "component": {
       "type": "object",
       "properties": {
-        "variable": {
+        "variable-list": {
         }
       },
       "required": [
-        "variable"
+        "variable-list"
       ],
       "additionalProperties": false
     }

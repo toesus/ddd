@@ -18,63 +18,60 @@ class DB:
     
     def __init__(self):
        
-        self.objectnames = {'variable':'/variables/','datatype':None,'project':None,'component':'/*/'}
+        self.objectnames = {'variable-list':None,'variable':'/variables/','datatype':None,'project':None,'component':'/*/'}
         
         self.handler = Handler()
         
-        self.object_by_hash = {'variable':{},'component':{},'datatype':{},'project':{}}
-        self.name_by_hash = {'variable':{},'component':{},'datatype':{},'project':{}}
-        self.wc_by_hash = {'variable':{},'component':{},'datatype':{},'project':{}}
+        self.objects = {}
+        self.tree = {}
+        #self.object_by_hash = {}#{'variable':{},'component':{},'datatype':{},'project':{}}
     
     def recload(self,data,name,path):
-        objname = data.keys()[0]
-        print "Recursively Loading "+objname
+        objtype = data.keys()[0]
+        print "Recursively Loading "+objtype
         new_data = {}
-        for key in data[objname]:
+        for key,value in data[objtype].iteritems():
             # check if the key is one of the "reserved" ddd types
             # if yes, it has to be treated as a reference
             if self.objectnames.has_key(key):
                 #print "Object Found: "+key
-                if type(data[objname][key]) == type({}):
-                    # It is an inlined Object, we can directly load the referenced object
-                    new_data[key] = self.recload(data[objname],'',path)
-                elif type( data[objname][key]) == type(''):
-                    print 'Reference FK: '+key
-                elif type( data[objname][key]) == type([]):
-                    #print "Many-To-Many: "+key
-                    new_data[key]=[]
-                    for ref in data[objname][key]:
-                        if type(ref)==type(u""):
-                            tmpname = ref
-                        else:
-                            tmpname=ref.keys()[0]
-                        flist = glob.glob(path+self.objectnames[key]+tmpname+'.ddd')
+                if type(value)!=type([]):
+                    value = [value]
+                new_data[key]=[]
+                for listvalue in value:
+                    if type(listvalue) == type({}):
+                        # It is an inlined Object, we can directly load the referenced object
+                        new_data[key].append(self.recload({key:listvalue},'',path))
+                    elif type( listvalue) == type(u''):
+                        print 'Reference FK: '+key
+                        flist = glob.glob(path+self.objectnames[key]+listvalue+'.ddd')
                         if len(flist)!=0:
                             fname = os.path.join(flist[0])
                         tmpname,res=self.handler.load(fname)
-                        tmphash = self.recload(res,tmpname,os.path.dirname(fname))
-                        if type(ref)==type(u""):
-                            new_data[key].append(tmphash)
-                        else:
-                            new_data[key].append({tmphash:ref[tmpname]})
-                        
-                        #del new_data[objname][key][ref]
-                        #ref[tmphash]=ref.pop(tmpname)
+                        tmphash = self.recload(res,listvalue,os.path.dirname(fname))
+                        new_data[key].append(tmphash)
+                    elif type( listvalue) == type([]):
+                        raise Exception('oioioioio')
             else:
-                print key + ': '+ data[objname][key]
-                new_data[key]=data[objname][key]
+                print key + ': '+ value
+                new_data[key]=value
         
         print "Calculating Hash on:"
-        hashstring=json.dumps({name:{objname:new_data}},sort_keys=True)
-        print hashstring
-        tmphash=hashlib.sha1(hashstring).hexdigest()
-        print 'Creating '+objname
-        self.name_by_hash[objname][tmphash]=name
-        self.object_by_hash[objname][tmphash]=new_data
-        self.wc_by_hash[objname][tmphash]=1
-        #self.objectnames[objname].create(**data[objname])
+        ohashstring=json.dumps(new_data,sort_keys=True)
+        print ohashstring
+        otmphash=hashlib.sha1(ohashstring).hexdigest()
+        print 'Creating '+objtype
+        self.objects[otmphash]=new_data
+        
+        t={'object':otmphash,
+           'type':objtype,
+           'name':name,
+           'parent':None}
+        thash=hashlib.sha1(json.dumps(t,sort_keys=True)).hexdigest()
+        self.tree[thash]=t
+        #self.objectnames[objtype].create(**data[objtype])
         #TODO: Add to DB-Lists
-        return tmphash
+        return thash
         
     
             
@@ -95,40 +92,61 @@ class DB:
             level = res.keys()[0]
             
             if level=='project' or level == 'component':
-                with open(os.path.join('repo','repo.ddd'),'r') as fp:
-                    tmp = json.load(fp)
-                    self.name_by_hash.update(tmp['names'])
-                    self.object_by_hash.update(tmp['objects'])
-                self.recload(res,name,path)
+                if os.path.isfile(os.path.join('repo','repo.ddd')):
+                    with open(os.path.join('repo','repo.ddd'),'r') as fp:
+                        tmp = json.load(fp)
+                        self.objects.update(tmp['objects'])
+                        self.tree.update(tmp['tree'])
+                return self.recload(res,name,path)
                 
             elif level == 'variable':
                 print "Loading of single variables is not supported"  
     
-    def check(self):
+    def get_objects_below(self,h,t,comp=''):
+        tmp = {}
+        if self.tree[h]['type']=='component':
+            comp=self.tree[h]['name']
+        o = self.objects.get(self.tree.get(h,{})['object'],{})
+        
+        for key,value in o.iteritems():
+            if self.objectnames.has_key(key):
+                if key==t:
+                    print "Found"+o['type']
+                    if not tmp.has_key(value[0]):
+                        tmp[value[0]]={}
+                    if not tmp[value[0]].has_key(o['type']):
+                        tmp[value[0]][o['type']]=[]
+                    tmp[value[0]][o['type']].append(comp)
+                #print "Object Found: "+key
+                else:
+                    if type(value)!=type([]):
+                        value = [value]
+                    for listvalue in value:
+                        for k,v in self.get_objects_below(listvalue,t,comp).iteritems():
+                            if not tmp.has_key(k):
+                                tmp[k]=v
+                            else:
+                                tmp[k].update(v)
+        return tmp
+    
+    def check(self,hash):
         print "Checking current Project"
         e = 0   
         hash_by_name = {}
-        for v in self.name_by_hash['variable']:
-            if hash_by_name.has_key(self.name_by_hash['variable'][v]):
-                print "Inconsistent Versions used for: "+self.name_by_hash['variable'][v]
+        found_variables = self.get_objects_below(hash, 'variable')
+        for v in found_variables:
+            if hash_by_name.has_key(self.tree[v]['name']):
+                print "Inconsistent Versions used for: "+self.tree[v]['name']
                 e+=1
-            hash_by_name[self.name_by_hash['variable'][v]]=v
-        
-        vartype_by_name = {}
-        for c in self.object_by_hash['component']:
-            for v in self.object_by_hash['component'][c]['variable']:
-                if not vartype_by_name.has_key(self.name_by_hash['variable'][v.keys()[0]]):
-                    vartype_by_name[self.name_by_hash['variable'][v.keys()[0]]]={'input':[],'output':[],'local':[]}
-                vartype_by_name[self.name_by_hash['variable'][v.keys()[0]]][v[v.keys()[0]]['type']].append(c)
-              
-        for t in vartype_by_name:
-            if len(vartype_by_name[t]['output'])>1:
-                print "Multiple Outputs for: "+self.name_by_hash['variable'][t]+" in Components: "+str(vartype_by_name[t]['output'])
+            hash_by_name[self.tree[v]['name']]=v
+        for hash,value in found_variables.iteritems():
+            if len(value.get('output',[]))>1:
+                print "Multiple Outputs for: "+self.tree[hash]['name']+" in Components: "+str(value['output'])
                 e+=1
-            if len(vartype_by_name[t]['input'])>0:
-                if len(vartype_by_name[t]['output'])==0:
+            if len(value.get('input',[]))>0:
+                if len(value.get('output',[]))==0:
                     e+=1
-                    print "Input with no Output for "+t+" in Components: "+str(map(lambda x: self.name_by_hash['component'][x],vartype_by_name[t]['input']))     
+                    print "Input with no Output for "+self.tree[hash]['name']+" in Components: "+str(value['input'])
         if e>0:
             print "Project is not consistent, "+str(e)+" errors found"
         else:
@@ -139,19 +157,19 @@ class DB:
         print "Viewing Repository..."
         r = pystache.Renderer(search_dirs='./cfg/templates')
         
-        viewerdata={}
-        for objecttype in self.object_by_hash:
+        viewerdata={'types':[]}
+        for objecttype in self.objectnames:
             tmp_list=[]
-            for obj in self.object_by_hash[objecttype]:
-                tmp_list.append({'hash':obj,'name':self.name_by_hash[objecttype][obj],'wc':self.wc_by_hash[objecttype].get(obj,False)})
-            viewerdata.update({objecttype:tmp_list})
+            for h,o in filter(lambda o: o[1]['type']==objecttype, self.tree.iteritems()):
+                tmp_list.append({'hash':h,'name':o['name'],'wc':False,'raw':json.dumps(self.objects[o['object']],indent=4)})#self.wc_by_hash[objecttype].get(obj,False)})
+            viewerdata['types'].append({'type':objecttype,'objects':tmp_list})
         with open('viewer.html','w') as fp:
             fp.write(r.render_name('viewer.html',viewerdata))
     
     def commit(self,path='repo'):
         print "Commiting to local repository..."
         with open(os.path.join(path,'repo.ddd'),'w') as fp:
-            json.dump({'names':self.name_by_hash,'objects':self.object_by_hash},fp,indent=4,sort_keys=True)
+            json.dump({'objects':self.objects,'tree':self.tree},fp,indent=4,sort_keys=True)
     
     def init(self,path='repo'):
         print "Initializing repoisitory structure in "+path+" ..."
