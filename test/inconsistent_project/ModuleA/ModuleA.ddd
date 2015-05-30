@@ -1,15 +1,13 @@
 {
     "component": {
-        "variable": [
+        "variable-list": [
             {
-                "VariableA": {
-                    "type": "output"
-                }
+                "variable":"VariableA",
+                "type": "output"
             },
             {
-                "VariableB": {
-                    "type": "input"
-                }
+                "variable":"VariableB",
+                "type": "input"
             }
         ]
     }

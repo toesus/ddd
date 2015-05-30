@@ -1,6 +1,6 @@
 {
     "variable": {
-        "datatype":{"basetype":"uint16",
+        "datatype":{"basetype":"sint16",
         "conversion":" "},
         "parent":""
     }

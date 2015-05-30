@@ -1,20 +1,17 @@
 {
     "component": {
-        "variable": [
+        "variable-list": [
             {
-                "VariableC": {
+                "variable":"VariableC",
                     "type": "local"
-                }
             },
             {
-                "VariableB": {
+                "variable":"VariableB",
                     "type": "output"
-                }
             },
             {
-                "VariableD": {
+                "variable":"VariableD",
                     "type": "input"
-                }
             }
         ]
     }
