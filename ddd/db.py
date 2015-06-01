@@ -7,6 +7,17 @@ import pystache
 from fileinput import filename
 from collections import defaultdict
 
+class CheckVisitor:
+    def __init__(self):
+        self.cur_component=''
+        self.found_variables = defaultdict(lambda :dict({'input':[],'output':[],'local':[]}))
+    
+    def __call__(self,tree,obj):
+        if tree['type']=='component':
+            self.cur_component=tree['name']
+        elif tree['type']=='variable-list':
+            self.found_variables[obj['variable'][0]][obj['type']].append(self.cur_component)
+
 class DB:
     
     def __init__(self):
@@ -18,6 +29,20 @@ class DB:
         self.objects = {}
         self.tree = {}
         self.wc_files = defaultdict(list)
+        
+    def walk(self,visitor,h):
+#         if self.tree[h]['type']=='component':
+#             comp=self.tree[h]['name']
+        o = self.objects.get(self.tree.get(h,{})['object'],{})
+        visitor(self.tree.get(h,{}),o)
+        
+        for key,value in o.iteritems():
+            if self.objectnames.has_key(key):
+                    if type(value)!=type([]):
+                        value = [value]
+                    for listvalue in value:
+                        self.walk(visitor,listvalue)
+        return
     
     def recload(self,objtype,data,name,filename):
         #objtype = data.keys()[0]
@@ -91,46 +116,21 @@ class DB:
                 return self.recload(level,res,name,flist[0])
                 
             elif level == 'variable':
-                print "Loading of single variables is not supported"  
-    
-    def get_objects_below(self,h,t,comp=''):
-        tmp = {}
-        if self.tree[h]['type']=='component':
-            comp=self.tree[h]['name']
-        o = self.objects.get(self.tree.get(h,{})['object'],{})
-        
-        for key,value in o.iteritems():
-            if self.objectnames.has_key(key):
-                if key==t:
-                    print "Found"+o['type']
-                    if not tmp.has_key(value[0]):
-                        tmp[value[0]]={}
-                    if not tmp[value[0]].has_key(o['type']):
-                        tmp[value[0]][o['type']]=[]
-                    tmp[value[0]][o['type']].append(comp)
-                #print "Object Found: "+key
-                else:
-                    if type(value)!=type([]):
-                        value = [value]
-                    for listvalue in value:
-                        for k,v in self.get_objects_below(listvalue,t,comp).iteritems():
-                            if not tmp.has_key(k):
-                                tmp[k]=v
-                            else:
-                                tmp[k].update(v)
-        return tmp
+                print "Loading of single variables is not supported"
     
     def check(self,hash):
         print "Checking current Project"
         e = 0   
+        visitor=CheckVisitor()
+        self.walk(visitor,hash)
+        
         hash_by_name = {}
-        found_variables = self.get_objects_below(hash, 'variable')
-        for v in found_variables:
+        for v in visitor.found_variables:
             if hash_by_name.has_key(self.tree[v]['name']):
                 print "Inconsistent Versions used for: "+self.tree[v]['name']
                 e+=1
             hash_by_name[self.tree[v]['name']]=v
-        for hash,value in found_variables.iteritems():
+        for hash,value in visitor.found_variables.iteritems():
             if len(value.get('output',[]))>1:
                 print "Multiple Outputs for: "+self.tree[hash]['name']+" in Components: "+str(value['output'])
                 e+=1
