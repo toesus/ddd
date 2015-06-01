@@ -22,7 +22,12 @@ class DB:
     
     def __init__(self):
        
-        self.objectnames = {'variable-list':None,'variable':'variables/','datatype':None,'project':None,'component':'*/'}
+        self.objectnames = {'variable-list':None,
+                            'variable':'variables/',
+                            'datatype':None,
+                            'project':None,
+                            'component':'*/',
+                            'component-list':'*/'}
         
         self.handler = Handler()
         

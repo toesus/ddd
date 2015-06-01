@@ -1,4 +1,5 @@
 {"project":{
-"component":["ModuleA","ModuleB"]
+"component-list":[{"component":"ModuleA"},
+                  {"component":"ModuleB"}]
 }
 }

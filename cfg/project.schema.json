@@ -4,11 +4,11 @@
     "project": {
       "type": "object",
       "properties": {
-        "component": {
+        "component-list": {
         }
       },
       "required": [
-        "component"
+        "component-list"
       ],
       "additionalProperties": false
     }
