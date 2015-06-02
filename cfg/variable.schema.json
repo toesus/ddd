@@ -19,18 +19,17 @@
             }
           }
         },
-        "parent": {
+        "min": {
           "type": [
             "null",
-            "string"
+            "integer"
           ]
         }
       },
       "required": [
-        "datatype",
-        "parent"
+        "datatype"
       ],
-      "additionalProperties": false
+      "additionalProperties": true
     }
   },
   "required": [

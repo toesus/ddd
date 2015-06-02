@@ -20,6 +20,8 @@ def main():
     parser_commit = subparsers.add_parser('commit', help='Commit the DDD Object(s) to a local repository')
     parser.add_argument(dest="paths", help="Path to root folder of DDD Repository", metavar="path", nargs='+')
     
+    parser_export = subparsers.add_parser('export', help='Commit the DDD Object(s) to a local repository')
+    parser_export.add_argument('--source',dest='source',action='store_true',help='Export the source for the current project')
     
     # Process arguments
     args = parser.parse_args()
@@ -52,6 +54,14 @@ def main():
             db.commit()
         else:
             print "Project is not consistent, committing not allowed"
+    elif args.subcommand=='export':
+        if db.check(h)==0:
+            if args.source:
+                print "Exporting Source"
+                db.export_source(h)
+                
+        else:
+            print "Project is not consistent, exporting not allowed"
             
 if __name__ == "__main__":
     main()

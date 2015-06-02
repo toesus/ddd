@@ -7,16 +7,34 @@ import pystache
 from fileinput import filename
 from collections import defaultdict
 
+class SourceVisitor:
+    def __init__(self):
+        self.cur_component=''
+        self.cur_var = {}
+        self.found_variables = defaultdict(lambda :dict({'hash':None,'name':None,'declarations':[],'definitions':[]}))
+    
+    def __call__(self,h,tree,obj):
+        if tree['type']=='component':
+            self.cur_component=tree['name']
+            self.found_variables[self.cur_component]['hash']=h
+            self.found_variables[self.cur_component]['name']=self.cur_component
+        elif tree['type']=='variable-list':
+            self.cur_var.update({obj['variable']:obj['type']})
+        elif tree['type']=='variable':
+            if self.cur_var[h]=='output' or self.cur_var[h]=='local':
+                self.found_variables[self.cur_component]['definitions'].append(tree['name'])
+            self.found_variables[self.cur_component]['declarations'].append(tree['name'])
+            
 class CheckVisitor:
     def __init__(self):
         self.cur_component=''
         self.found_variables = defaultdict(lambda :dict({'input':[],'output':[],'local':[]}))
     
-    def __call__(self,tree,obj):
+    def __call__(self,h,tree,obj):
         if tree['type']=='component':
             self.cur_component=tree['name']
         elif tree['type']=='variable-list':
-            self.found_variables[obj['variable'][0]][obj['type']].append(self.cur_component)
+            self.found_variables[obj['variable']][obj['type']].append(self.cur_component)
 
 class DB:
     
@@ -36,18 +54,13 @@ class DB:
         self.wc_files = defaultdict(list)
         
     def walk(self,visitor,h):
-#         if self.tree[h]['type']=='component':
-#             comp=self.tree[h]['name']
         o = self.objects.get(self.tree.get(h,{})['object'],{})
-        visitor(self.tree.get(h,{}),o)
+        visitor(h,self.tree.get(h,{}),o)
         
         for key,value in o.iteritems():
             if self.objectnames.has_key(key):
-                    if type(value)!=type([]):
-                        value = [value]
-                    for listvalue in value:
+                    for listvalue in value if key.endswith('-list') else [value]:
                         self.walk(visitor,listvalue)
-        return
     
     def recload(self,objtype,data,name,filename):
         #objtype = data.keys()[0]
@@ -58,13 +71,11 @@ class DB:
             # if yes, it has to be treated as a reference
             if self.objectnames.has_key(key):
                 #print "Object Found: "+key
-                if type(value)!=type([]):
-                    value = [value]
                 new_data[key]=[]
-                for listvalue in value:
+                for listvalue in value if key.endswith('-list') else [value]:
                     if type(listvalue) == type({}):
                         # It is an inlined Object, we can directly load the referenced object
-                        new_data[key].append(self.recload(key,listvalue,'',filename))
+                        tmphash=self.recload(key,listvalue,'',filename)
                     elif type( listvalue) == type(u''):
                         tmpsearch=os.path.join(os.path.split(filename)[0],self.objectnames[key],listvalue+'.ddd')
                         fname = glob.glob(tmpsearch)
@@ -72,9 +83,12 @@ class DB:
                             raise Exception('The file '+tmpsearch+' does not exist!')
                         tmpname,tmptype,res,tmpfilename=self.handler.load(fname[0],expected_type=key)
                         tmphash = self.recload(tmptype,res,tmpname,fname[0])
+                    if key.endswith('-list'):
                         new_data[key].append(tmphash)
+                    else:
+                        new_data[key]=tmphash
             else:
-                print key + ': '+ value
+                print key + ': '+ str(value)
                 new_data[key]=value
         
         print "Calculating Hash on:"
@@ -166,6 +180,14 @@ class DB:
         print "Commiting to local repository..."
         with open(os.path.join(path,'repo.ddd'),'w') as fp:
             json.dump({'objects':self.objects,'tree':self.tree},fp,indent=4,sort_keys=True)
+    
+    def export_source(self,hash,path='source'):
+        visitor = SourceVisitor()
+        self.walk(visitor,hash)
+        print visitor.found_variables
+        r = pystache.Renderer(search_dirs='./cfg/templates')
+        for m in visitor.found_variables:
+            print r.render_name('decl.h',visitor.found_variables[m])
     
     def init(self,path='repo'):
         print "Initializing repoisitory structure in "+path+" ..."
