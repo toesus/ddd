@@ -29,13 +29,65 @@ class CheckVisitor:
     def __init__(self):
         self.cur_component=''
         self.found_variables = defaultdict(lambda :dict({'input':[],'output':[],'local':[]}))
-    
-    def __call__(self,h,tree,obj):
-        if tree['type']=='component':
-            self.cur_component=tree['name']
-        elif tree['type']=='variable-list':
-            self.found_variables[obj['variable']][obj['type']].append(self.cur_component)
+    def pre_order(self,obj):
+        if obj.objtype=='component':
+            self.cur_component=obj.name
+        elif obj.objtype=='variable-list':
+            self.found_variables[obj.children[0].hash][obj.data['type']].append(self.cur_component)
+    def in_order(self,obj):
+        pass
+    def post_order(self,obj):
+        pass
+        
+            
+class HashVisitor:
+    def __init__(self,hashdict):
+        self.d = hashdict
+        self.cur_children=[]
+    def pre_order(self,obj):
+        pass
+    def in_order(self,obj):
+        self.cur_children.append(obj.hash)
+    def post_order(self,obj):
+        t={'data':obj.data,
+           'type':obj.objtype,
+           'name':obj.name,
+           'children':map(lambda c:c.hash,obj.children)}
+        tmpstring=json.dumps(t,sort_keys=True)
+        print "Calculating Hash on: "+tmpstring
+        obj.hash=hashlib.sha1(tmpstring).hexdigest()
+        self.d[obj.hash]=obj
+        self.cur_children=[]
+        
 
+
+class DataObject:
+    def __init__(self,data={},name='',objtype=''):
+        self.data = data
+        self.children = []
+        self.name=name
+        self.objtype=objtype
+        self.hash=None
+    def visit(self,visitor):
+        visitor.pre_order(self)
+        
+        for c in self.children:
+            c.visit(visitor)
+            visitor.in_order(self)
+        
+        visitor.post_order(self)
+    def getJsonDict(self):
+        return {'data':self.data,
+               'type':self.objtype,
+               'name':self.name,
+               'children':map(lambda c:c.hash,self.children)}
+        
+class DDDEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, DataObject):
+            return obj.getJsonDict()#json.dumps(obj.getJsonDict(),indent=4,sort_keys=True)
+        else:
+            return json.JSONEncoder.default(self, obj)
 class DB:
     
     def __init__(self):
@@ -49,65 +101,44 @@ class DB:
         
         self.handler = Handler()
         
-        self.objects = {}
+        self.root = None
         self.tree = {}
         self.wc_files = defaultdict(list)
         
-    def walk(self,visitor,h):
-        o = self.objects.get(self.tree.get(h,{})['object'],{})
-        visitor(h,self.tree.get(h,{}),o)
-        
-        for key,value in o.iteritems():
-            if self.objectnames.has_key(key):
-                    for listvalue in value if key.endswith('-list') else [value]:
-                        self.walk(visitor,listvalue)
     
     def recload(self,objtype,data,name,filename):
         #objtype = data.keys()[0]
         print "Recursively Loading "+objtype
         new_data = {}
+        newobj=DataObject(name=name,objtype=objtype)
         for key,value in data.iteritems():
             # check if the key is one of the "reserved" ddd types
             # if yes, it has to be treated as a reference
             if self.objectnames.has_key(key):
                 #print "Object Found: "+key
-                new_data[key]=[]
+                
                 for listvalue in value if key.endswith('-list') else [value]:
                     if type(listvalue) == type({}):
                         # It is an inlined Object, we can directly load the referenced object
-                        tmphash=self.recload(key,listvalue,'',filename)
+                        tmpobj=self.recload(key,listvalue,'',filename)
                     elif type( listvalue) == type(u''):
                         tmpsearch=os.path.join(os.path.split(filename)[0],self.objectnames[key],listvalue+'.ddd')
                         fname = glob.glob(tmpsearch)
                         if len(fname)==0:
                             raise Exception('The file '+tmpsearch+' does not exist!')
                         tmpname,tmptype,res,tmpfilename=self.handler.load(fname[0],expected_type=key)
-                        tmphash = self.recload(tmptype,res,tmpname,fname[0])
-                    if key.endswith('-list'):
-                        new_data[key].append(tmphash)
-                    else:
-                        new_data[key]=tmphash
+                        tmpobj = self.recload(tmptype,res,tmpname,fname[0])
+                    newobj.children.append(tmpobj)
             else:
                 print key + ': '+ str(value)
                 new_data[key]=value
+        newobj.data=new_data
         
-        print "Calculating Hash on:"
-        ohashstring=json.dumps(new_data,sort_keys=True)
-        print ohashstring
-        otmphash=hashlib.sha1(ohashstring).hexdigest()
-        print 'Creating '+objtype
-        self.objects[otmphash]=new_data
+        #self.tree[newobj.get_hash()]=newobj
         
-        t={'object':otmphash,
-           'type':objtype,
-           'name':name,
-           'parent':None}
-        thash=hashlib.sha1(json.dumps(t,sort_keys=True)).hexdigest()
-        self.tree[thash]=t
+        #self.wc_files[thash].append(filename)
         
-        self.wc_files[thash].append(filename)
-        
-        return thash
+        return newobj
         
     
             
@@ -130,9 +161,12 @@ class DB:
                 if os.path.isfile(os.path.join('repo','repo.ddd')):
                     with open(os.path.join('repo','repo.ddd'),'r') as fp:
                         tmp = json.load(fp)
-                        self.objects.update(tmp['objects'])
-                        self.tree.update(tmp['tree'])
-                return self.recload(level,res,name,flist[0])
+                        #self.objects.update(tmp['objects'])
+                        #self.tree.update(tmp['tree'])
+                tmpobj=self.recload(level,res,name,flist[0])
+                tmpobj.visit(HashVisitor(self.tree))
+                self.root=tmpobj
+                return tmpobj.hash
                 
             elif level == 'variable':
                 print "Loading of single variables is not supported"
@@ -141,22 +175,22 @@ class DB:
         print "Checking current Project"
         e = 0   
         visitor=CheckVisitor()
-        self.walk(visitor,hash)
+        self.root.visit(visitor)
         
         hash_by_name = {}
         for v in visitor.found_variables:
-            if hash_by_name.has_key(self.tree[v]['name']):
-                print "Inconsistent Versions used for: "+self.tree[v]['name']
+            if hash_by_name.has_key(self.tree[v].name):
+                print "Inconsistent Versions used for: "+self.tree[v].name
                 e+=1
-            hash_by_name[self.tree[v]['name']]=v
+            hash_by_name[self.tree[v].name]=v
         for hash,value in visitor.found_variables.iteritems():
             if len(value.get('output',[]))>1:
-                print "Multiple Outputs for: "+self.tree[hash]['name']+" in Components: "+str(value['output'])
+                print "Multiple Outputs for: "+self.tree[hash].name+" in Components: "+str(value['output'])
                 e+=1
             if len(value.get('input',[]))>0:
                 if len(value.get('output',[]))==0:
                     e+=1
-                    print "Input with no Output for "+self.tree[hash]['name']+" in Components: "+str(value['input'])
+                    print "Input with no Output for "+self.tree[hash].name+" in Components: "+str(value['input'])
         if e>0:
             print "Project is not consistent, "+str(e)+" errors found"
         else:
@@ -170,8 +204,8 @@ class DB:
         viewerdata={'types':[]}
         for objecttype in self.objectnames:
             tmp_list=[]
-            for h,o in filter(lambda o: o[1]['type']==objecttype, self.tree.iteritems()):
-                tmp_list.append({'hash':h,'name':o['name'],'wc':False,'raw':json.dumps(self.objects[o['object']],indent=4)})#self.wc_by_hash[objecttype].get(obj,False)})
+            for h,o in filter(lambda o: o[1].objtype==objecttype, self.tree.iteritems()):
+                tmp_list.append({'hash':o.hash,'name':o.name,'wc':False,'raw':json.dumps({'data':o.data,'children':map(lambda c:c.hash,o.children)},indent=4)})#self.wc_by_hash[objecttype].get(obj,False)})
             viewerdata['types'].append({'type':objecttype,'objects':tmp_list})
         with open('viewer.html','w') as fp:
             fp.write(r.render_name('viewer.html',viewerdata))
@@ -179,7 +213,7 @@ class DB:
     def commit(self,path='repo'):
         print "Commiting to local repository..."
         with open(os.path.join(path,'repo.ddd'),'w') as fp:
-            json.dump({'objects':self.objects,'tree':self.tree},fp,indent=4,sort_keys=True)
+            json.dump({'tree':self.tree},fp,indent=4,sort_keys=True,cls=DDDEncoder)
     
     def export_source(self,hash,path='source'):
         visitor = SourceVisitor()

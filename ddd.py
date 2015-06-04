@@ -38,12 +38,14 @@ def main():
     print "Loaded..."
     print h
     
+    
+    
     for t in db.objectnames:
         print t + ':'
-        for o in [x for x in db.tree.keys() if db.tree[x]['type']==t ]:
+        for o in [x for x in db.tree.keys() if db.tree[x].objtype==t ]:
         #for o in map(lambda x: x if db.object_by_hash[x].keys()[0]==t else None ,db.object_by_hash.keys()):
             if o:
-                print o+' : '+db.tree[o]['name']
+                print o+' : '+db.tree[o].name
     
     if args.subcommand=='check':
         db.check(h)
