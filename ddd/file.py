@@ -25,7 +25,6 @@ class File:
             self.dict = {}
             
         else:
-            print "ddd-json: Loaded "+filename
             self.name = os.path.splitext(os.path.basename(filename))[0]
             self.filename = os.path.abspath(filename)
             

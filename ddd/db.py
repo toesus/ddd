@@ -43,31 +43,26 @@ class CheckVisitor:
 class HashVisitor:
     def __init__(self,hashdict):
         self.d = hashdict
-        self.cur_children=[]
     def pre_order(self,obj):
         pass
     def in_order(self,obj):
-        self.cur_children.append(obj.hash)
+        pass
     def post_order(self,obj):
-        t={'data':obj.data,
-           'type':obj.objtype,
-           'name':obj.name,
-           'children':map(lambda c:c.hash,obj.children)}
-        tmpstring=json.dumps(t,sort_keys=True)
-        print "Calculating Hash on: "+tmpstring
-        obj.hash=hashlib.sha1(tmpstring).hexdigest()
-        self.d[obj.hash]=obj
-        self.cur_children=[]
-        
+        obj.update_hash()
+        if not obj.objtype=='repo' and not obj.objtype=='root':
+            self.d[obj.hash]=obj
 
 
 class DataObject:
-    def __init__(self,data={},name='',objtype=''):
+    def __init__(self,data=None,name='',objtype='',hash=None,children=None):
+        # this needs to be done to avoid mutable objects as default arguments
+        if data is None: data = {}
+        if children is None: children = []
         self.data = data
-        self.children = []
+        self.children = children
         self.name=name
         self.objtype=objtype
-        self.hash=None
+        self.hash=hash
     def visit(self,visitor):
         visitor.pre_order(self)
         
@@ -78,9 +73,17 @@ class DataObject:
         visitor.post_order(self)
     def getJsonDict(self):
         return {'data':self.data,
-               'type':self.objtype,
+               'objtype':self.objtype,
                'name':self.name,
+               #'hash':self.hash,
                'children':map(lambda c:c.hash,self.children)}
+    def update_hash(self):
+        tmpstring=json.dumps(self.getJsonDict(),sort_keys=True)
+        print "Calculating Hash on: "+tmpstring
+        newh=hashlib.sha1(tmpstring).hexdigest()
+        if self.hash and self.hash!=newh:
+            raise Exception('Object with a bad hash found')
+        self.hash=newh
         
 class DDDEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -88,6 +91,15 @@ class DDDEncoder(json.JSONEncoder):
             return obj.getJsonDict()#json.dumps(obj.getJsonDict(),indent=4,sort_keys=True)
         else:
             return json.JSONEncoder.default(self, obj)
+        
+class DDDDecoder(json.JSONDecoder):
+    def __init__(self,encoding):
+            json.JSONDecoder.__init__(self, object_hook=self.dict_to_object)
+
+    def dict_to_object(self, d): 
+        if 'objtype' not in d:
+            return d
+        return DataObject(**d)
 class DB:
     
     def __init__(self):
@@ -101,16 +113,16 @@ class DB:
         
         self.handler = Handler()
         
-        self.root = None
+        self.root = DataObject(name='root', objtype='root')
         self.tree = {}
         self.wc_files = defaultdict(list)
         
     
     def recload(self,objtype,data,name,filename):
         #objtype = data.keys()[0]
-        print "Recursively Loading "+objtype
+        #print "Recursively Loading "+objtype
         new_data = {}
-        newobj=DataObject(name=name,objtype=objtype)
+        new_children = []
         for key,value in data.iteritems():
             # check if the key is one of the "reserved" ddd types
             # if yes, it has to be treated as a reference
@@ -128,16 +140,15 @@ class DB:
                             raise Exception('The file '+tmpsearch+' does not exist!')
                         tmpname,tmptype,res,tmpfilename=self.handler.load(fname[0],expected_type=key)
                         tmpobj = self.recload(tmptype,res,tmpname,fname[0])
-                    newobj.children.append(tmpobj)
+                    new_children.append(tmpobj)
             else:
-                print key + ': '+ str(value)
+                #print key + ': '+ str(value)
                 new_data[key]=value
-        newobj.data=new_data
-        
-        #self.tree[newobj.get_hash()]=newobj
-        
-        #self.wc_files[thash].append(filename)
-        
+        newobj = DataObject(data=new_data, name=name, objtype=objtype, children=new_children)
+        newobj.update_hash()
+        tmp=self.tree.get(newobj.hash,None)
+        if not tmp:
+            print "Object does not exist in repo"
         return newobj
         
     
@@ -160,12 +171,24 @@ class DB:
             if level=='project' or level == 'component':
                 if os.path.isfile(os.path.join('repo','repo.ddd')):
                     with open(os.path.join('repo','repo.ddd'),'r') as fp:
-                        tmp = json.load(fp)
-                        #self.objects.update(tmp['objects'])
-                        #self.tree.update(tmp['tree'])
+                        tmp = json.load(fp,cls=DDDDecoder)
+                        orphans = tmp['tree'].copy()
+                        for t,o in tmp['tree'].iteritems():
+                            o.hash=t
+                            for idx,c in enumerate(o.children):
+                                o.children[idx]=tmp['tree'][c]
+                                orphans.pop(c,None)
+                        r=DataObject(name='LocalRepository', objtype='repo')
+                        self.root.children.append(r)
+                        for h in orphans:
+                            print "orphan in repo: "+orphans[h].objtype+' '+h
+                            if orphans[h].objtype=='project':
+                                r.children.append(orphans[h])  
+                        r.visit(HashVisitor(self.tree))
                 tmpobj=self.recload(level,res,name,flist[0])
-                tmpobj.visit(HashVisitor(self.tree))
-                self.root=tmpobj
+                
+                self.root.children.append(tmpobj)
+                self.root.visit(HashVisitor(self.tree))
                 return tmpobj.hash
                 
             elif level == 'variable':
@@ -175,7 +198,7 @@ class DB:
         print "Checking current Project"
         e = 0   
         visitor=CheckVisitor()
-        self.root.visit(visitor)
+        self.tree[hash].visit(visitor)
         
         hash_by_name = {}
         for v in visitor.found_variables:
