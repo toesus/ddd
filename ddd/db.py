@@ -90,8 +90,7 @@ class DataObject:
         return {'data':self.data,
                'objtype':self.objtype,
                'name':self.name,
-               #'hash':self.hash,
-               'children':map(lambda c:c.hash,self.children)}
+               'children':sorted(map(lambda c:c.hash,self.children))}
     def update_hash(self):
         tmpstring=json.dumps(self.getJsonDict(),sort_keys=True)
         print "Calculating Hash on: "+tmpstring
@@ -103,7 +102,7 @@ class DataObject:
 class DDDEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, DataObject):
-            return obj.getJsonDict()#json.dumps(obj.getJsonDict(),indent=4,sort_keys=True)
+            return obj.getJsonDict()
         else:
             return json.JSONEncoder.default(self, obj)
         
