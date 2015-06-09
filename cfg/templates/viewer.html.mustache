@@ -7,8 +7,12 @@
 {{#types}}
 <h1>{{type}}</h1>
 {{#objects}}
-{{hash}} - {{name}} {{#wc}}WC{{/wc}} </br>
-<pre>{{raw}}</pre>
+<a id="{{hash}}">{{hash}}</a> - {{name}} {{#wc}}WC{{/wc}} </br>
+{{#children}}
+<a href="#{{hash}}">{{hash}} - {{objtype}} {{name}}</a>
+</br>
+{{/children}}
+<pre>{{data}}</pre>
 </br>
 {{/objects}}
 {{/types}}

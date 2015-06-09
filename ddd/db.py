@@ -52,6 +52,21 @@ class HashVisitor:
         if not obj.objtype=='repo' and not obj.objtype=='root':
             self.d[obj.hash]=obj
 
+class ViewerVisitor:
+    def __init__(self):
+        self.data = defaultdict(lambda:[])
+        self.found={}
+    def pre_order(self,obj):
+        if not self.found.get(obj.hash,None):
+            self.data[obj.objtype].append({'name':obj.name,
+                               'hash':obj.hash,
+                               'data':obj.data,
+                               'children':map(lambda c:{'hash':c.hash,'name':c.name,'objtype':c.objtype},obj.children)})
+            self.found.update({obj.hash:True})
+    def in_order(self,obj):
+        pass
+    def post_order(self,obj):
+        pass
 
 class DataObject:
     def __init__(self,data=None,name='',objtype='',hash=None,children=None):
@@ -224,12 +239,11 @@ class DB:
         print "Viewing Repository..."
         r = pystache.Renderer(search_dirs='./cfg/templates')
         
+        visitor = ViewerVisitor()
+        self.root.visit(visitor)
         viewerdata={'types':[]}
-        for objecttype in self.objectnames:
-            tmp_list=[]
-            for h,o in filter(lambda o: o[1].objtype==objecttype, self.tree.iteritems()):
-                tmp_list.append({'hash':o.hash,'name':o.name,'wc':False,'raw':json.dumps({'data':o.data,'children':map(lambda c:c.hash,o.children)},indent=4)})#self.wc_by_hash[objecttype].get(obj,False)})
-            viewerdata['types'].append({'type':objecttype,'objects':tmp_list})
+        for k,v in visitor.data.iteritems():
+            viewerdata['types'].append({'type':k,'objects':v})
         with open('viewer.html','w') as fp:
             fp.write(r.render_name('viewer.html',viewerdata))
     
