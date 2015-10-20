@@ -13,18 +13,21 @@ class SourceVisitor:
         self.cur_var = {}
         self.found_variables = defaultdict(lambda :dict({'hash':None,'name':None,'declarations':[],'definitions':[]}))
     
-    def __call__(self,h,tree,obj):
-        if tree['type']=='component':
-            self.cur_component=tree['name']
-            self.found_variables[self.cur_component]['hash']=h
+    def pre_order(self,obj):
+        if obj.objtype=='component':
+            self.cur_component=obj.name
+            self.found_variables[self.cur_component]['hash']=obj.hash
             self.found_variables[self.cur_component]['name']=self.cur_component
-        elif tree['type']=='variable-list':
-            self.cur_var.update({obj['variable']:obj['type']})
-        elif tree['type']=='variable':
-            if self.cur_var[h]=='output' or self.cur_var[h]=='local':
-                self.found_variables[self.cur_component]['definitions'].append(tree['name'])
-            self.found_variables[self.cur_component]['declarations'].append(tree['name'])
-            
+        elif obj.objtype=='variable-list':
+            self.cur_var.update({obj.children[0].hash:obj.data['type']})
+            if obj.data['type']=='output' or obj.data['type']=='local':
+                self.found_variables[self.cur_component]['definitions'].append(obj.children[0])
+            self.found_variables[self.cur_component]['declarations'].append(obj.children[0])
+    def in_order(self,obj):
+        pass
+    def post_order(self,obj):
+        pass
+    
 class CheckVisitor:
     def __init__(self):
         self.cur_component=''
@@ -78,6 +81,11 @@ class DataObject:
         self.name=name
         self.objtype=objtype
         self.hash=hash
+        
+        for c in children:
+            if not c.objtype in self.__dict__:
+                self.__dict__[c.objtype]=c
+        
     def visit(self,visitor):
         visitor.pre_order(self)
         
@@ -253,7 +261,7 @@ class DB:
     
     def export_source(self,hash,path='source'):
         visitor = SourceVisitor()
-        self.walk(visitor,hash)
+        self.tree[hash].visit(visitor)
         print visitor.found_variables
         r = pystache.Renderer(search_dirs='./cfg/templates')
         for m in visitor.found_variables:
