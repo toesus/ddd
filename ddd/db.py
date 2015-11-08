@@ -32,15 +32,18 @@ class CheckVisitor:
     def __init__(self):
         self.cur_component=''
         self.found_variables = defaultdict(lambda :dict({'input':[],'output':[],'local':[]}))
+        self.variable_versions = defaultdict(lambda : defaultdict(lambda: []))
     def pre_order(self,obj):
-        if obj.objtype=='component':
-            self.cur_component=obj.name
-        elif obj.objtype=='variable-list':
-            self.found_variables[obj.children[0].hash][obj.data['type']].append(self.cur_component)
+        if isinstance(obj, DddComponent):
+            self.cur_component=obj.hash
+        elif isinstance(obj, DddVariable):
+            self.variable_versions[obj.name][obj.datatype.hash].append(self.cur_component)
+            self.found_variables[obj.name][obj.scope].append(self.cur_component)
     def in_order(self,obj):
         pass
     def post_order(self,obj):
         pass
+        
         
             
 class HashVisitor:
@@ -52,8 +55,7 @@ class HashVisitor:
         pass
     def post_order(self,obj):
         obj.update_hash()
-        if not obj.objtype=='repo' and not obj.objtype=='root':
-            self.d[obj.hash]=obj
+        self.d[obj.hash]=obj
 
 class ViewerVisitor:
     def __init__(self):
@@ -72,41 +74,64 @@ class ViewerVisitor:
         pass
 
 class DataObject:
-    def __init__(self,data=None,name='',objtype='',hash=None,children=None):
-        # this needs to be done to avoid mutable objects as default arguments
-        if data is None: data = {}
-        if children is None: children = []
-        self.data = data
-        self.children = children
-        self.name=name
-        self.objtype=objtype
-        self.hash=hash
-        
-        for c in children:
-            if not c.objtype in self.__dict__:
-                self.__dict__[c.objtype]=c
-        
+    def __init__(self):
+        self.hash=None
+    def getChildren(self):
+        return []
     def visit(self,visitor):
         visitor.pre_order(self)
         
-        for c in self.children:
+        for c in self.getChildren():
             c.visit(visitor)
             visitor.in_order(self)
         
         visitor.post_order(self)
-    def getJsonDict(self):
-        return {'data':self.data,
-               'objtype':self.objtype,
-               'name':self.name,
-               'children':sorted(map(lambda c:c.hash,self.children))}
+        
+    def getJsonDict(self,hashed=False):
+        raise NotImplementedError
     def update_hash(self):
-        tmpstring=json.dumps(self.getJsonDict(),sort_keys=True)
+        tmpstring=json.dumps(self.getJsonDict(hashed=True),sort_keys=True)
         print "Calculating Hash on: "+tmpstring
         newh=hashlib.sha1(tmpstring).hexdigest()
-        if self.hash and self.hash!=newh:
-            raise Exception('Object with a bad hash found')
         self.hash=newh
+
+class DddDatatype(DataObject):
+    def __init__(self,basetype='',conversion=''):
+        self.basetype=basetype
+        self.conversion=conversion
         
+    def getJsonDict(self,hashed=False):
+        return {'basetype':self.basetype,
+               'conversion':self.conversion}
+        
+class DddComponent(DataObject):
+    def __init__(self,variablelist=None,subcomponents=None):
+        if variablelist is not None:
+            self.variablelist=variablelist
+        else:
+            self.variablelist=[]
+        if subcomponents is not None:
+            self.subcomponents = subcomponents
+        else:
+            self.subcomponents = []
+    def getJsonDict(self,hashed=False):
+        return {'variablelist':sorted([(x.hash if hashed else x.getJsonDict()) for x in self.variablelist]),
+                'subcomponents':sorted([(x.hash if hashed else x.getJsonDict()) for x in self.subcomponents])}
+    def getChildren(self):
+        return self.variablelist + self.subcomponents
+    
+class DddVariable(DataObject):
+    def __init__(self,name='',datatype=None,scope='local'):
+        self.name=name
+        self.datatype=datatype
+        self.scope=scope
+        DataObject.__init__(self)
+        
+    def getJsonDict(self,hashed=False):
+        return {'name':self.name,'datatype':(self.datatype.hash if hashed else self.datatype.getJsonDict()),'scope':self.scope}
+    def getChildren(self):
+        return [self.datatype]
+               
 class DDDEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, DataObject):
@@ -119,9 +144,18 @@ class DDDDecoder(json.JSONDecoder):
             json.JSONDecoder.__init__(self, object_hook=self.dict_to_object)
 
     def dict_to_object(self, d): 
-        if 'objtype' not in d:
+        if 'variablelist' in d:
+            tmpvars=[]
+            for var in d['variablelist']:
+                tmpvars.append(DddVariable(**var))
+            return {'variablelist':tmpvars}
+        elif 'basetype' in d:
+            return DddDatatype(**d)
+        elif 'component' in d:
+            return DddComponent(**(d['component']))
+        else:
             return d
-        return DataObject(**d)
+    
 class DB:
     
     def __init__(self):
@@ -135,11 +169,27 @@ class DB:
         
         self.handler = Handler()
         
-        self.root = DataObject(name='root', objtype='root')
-        self.tree = {}
+        
         self.wc_files = defaultdict(list)
         
-    
+        self.objects = {} # hash:DataObject
+        self.index = {} # modulename:hash
+        self.modulenames = {}
+        
+    def add(self,filename):
+        modulename = os.path.splitext(os.path.basename(filename))[0]
+        with open(filename,'r') as fp:
+            tmp=json.load(fp,cls=DDDDecoder)
+        tmpc = []
+        for sc in tmp.subcomponents:
+            if sc in self.index:
+                tmpc.append(self.index[sc])
+        tmp.subcomponents = tmpc
+        hv = HashVisitor(self.objects)
+        tmp.visit(hv)
+        self.index[modulename]=tmp
+        self.modulenames[tmp.hash]=modulename
+        
     def recload(self,objtype,data,name,filename):
         #objtype = data.keys()[0]
         #print "Recursively Loading "+objtype
@@ -154,7 +204,7 @@ class DB:
                 for listvalue in value if key.endswith('-list') else [value]:
                     if type(listvalue) == type({}):
                         # It is an inlined Object, we can directly load the referenced object
-                        tmpobj=self.recload(key,listvalue,'',filename)
+                        tmpobj=self.recload(key,listvalue,listvalue.get('name',''),filename)
                     elif type( listvalue) == type(u''):
                         tmpsearch=os.path.join(os.path.split(filename)[0],self.objectnames[key],listvalue+'.ddd')
                         fname = glob.glob(tmpsearch)
@@ -220,22 +270,25 @@ class DB:
         print "Checking current Project"
         e = 0   
         visitor=CheckVisitor()
-        self.tree[hash].visit(visitor)
-        
+        self.objects[hash].visit(visitor)
+        print visitor.variable_versions
+        print visitor.found_variables
         hash_by_name = {}
-        for v in visitor.found_variables:
-            if hash_by_name.has_key(self.tree[v].name):
-                print "Inconsistent Versions used for: "+self.tree[v].name
+        for vname,usage in visitor.variable_versions.items():
+            if len(usage.keys())>1:
+                print "Inconsistent Versions used for: "+vname
+                for v in usage:
+                    print " - Version: "+v+' in '+''.join(map(lambda x:self.modulenames[x],usage[v]))
                 e+=1
-            hash_by_name[self.tree[v].name]=v
-        for hash,value in visitor.found_variables.iteritems():
+            hash_by_name[vname]=usage.keys()[0]
+        for vname,value in visitor.found_variables.iteritems():
             if len(value.get('output',[]))>1:
-                print "Multiple Outputs for: "+self.tree[hash].name+" in Components: "+str(value['output'])
+                print "Multiple Outputs for: "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:self.modulenames[x],value['output']))
                 e+=1
             if len(value.get('input',[]))>0:
                 if len(value.get('output',[]))==0:
                     e+=1
-                    print "Input with no Output for "+self.tree[hash].name+" in Components: "+str(value['input'])
+                    print "Input with no Output for "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:self.modulenames[x],value['input']))
         if e>0:
             print "Project is not consistent, "+str(e)+" errors found"
         else:
