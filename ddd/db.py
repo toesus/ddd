@@ -30,21 +30,31 @@ class SourceVisitor:
     
 class CheckVisitor:
     def __init__(self):
-        self.cur_component=''
-        self.found_variables = defaultdict(lambda :dict({'input':[],'output':[],'local':[]}))
+        self.component_stack=['rootlevel']
+        self.found_components=['rootlevel']
+        self.found_variables = {'rootlevel':defaultdict(lambda :dict({'input':[],'output':[],'local':[]}))}
         self.variable_versions = defaultdict(lambda : defaultdict(lambda: []))
     def pre_order(self,obj):
         if isinstance(obj, DddComponent):
-            self.cur_component=obj.hash
+            self.component_stack.append(obj.hash)
+            self.found_components.append(obj.hash)
+            self.found_variables[self.component_stack[-1]]=defaultdict(lambda :dict({'input':[],'output':[],'local':[]}))
+#             for v in obj.variablelist:
+#                 self.found_variables[self.component_stack[-1]][v.name][v.scope].append(self.component_stack[-1])
         elif isinstance(obj, DddVariable):
-            self.variable_versions[obj.name][obj.datatype.hash].append(self.cur_component)
-            self.found_variables[obj.name][obj.scope].append(self.cur_component)
+            self.variable_versions[obj.name][obj.datatype.hash].append(self.component_stack[-1])
+            self.found_variables[self.component_stack[-2]][obj.name][obj.scope].append(self.component_stack[-1])
     def in_order(self,obj):
         pass
     def post_order(self,obj):
-        pass
-        
-        
+        if isinstance(obj, DddComponent):
+            c=self.component_stack.pop()
+            
+#             d = dict([[v.hash]+[v.name] for v in obj.variablelist])
+#             
+#             for varname,scope in self.found_variables[c].items():
+#                 print scope
+#                 self.found_variables[self.found_components[-1]][varname].update(scope)
             
 class HashVisitor:
     def __init__(self,hashdict):
@@ -148,7 +158,7 @@ class DDDDecoder(json.JSONDecoder):
             tmpvars=[]
             for var in d['variablelist']:
                 tmpvars.append(DddVariable(**var))
-            return {'variablelist':tmpvars}
+            return {'variablelist':tmpvars,'subcomponents':d.get('subcomponents',[])}
         elif 'basetype' in d:
             return DddDatatype(**d)
         elif 'component' in d:
@@ -184,111 +194,36 @@ class DB:
         for sc in tmp.subcomponents:
             if sc in self.index:
                 tmpc.append(self.index[sc])
+            else:
+                raise Exception("Subcomponent "+sc+" not found in Index")
         tmp.subcomponents = tmpc
         hv = HashVisitor(self.objects)
         tmp.visit(hv)
         self.index[modulename]=tmp
         self.modulenames[tmp.hash]=modulename
         
-    def recload(self,objtype,data,name,filename):
-        #objtype = data.keys()[0]
-        #print "Recursively Loading "+objtype
-        new_data = {}
-        new_children = []
-        for key,value in data.iteritems():
-            # check if the key is one of the "reserved" ddd types
-            # if yes, it has to be treated as a reference
-            if self.objectnames.has_key(key):
-                #print "Object Found: "+key
-                
-                for listvalue in value if key.endswith('-list') else [value]:
-                    if type(listvalue) == type({}):
-                        # It is an inlined Object, we can directly load the referenced object
-                        tmpobj=self.recload(key,listvalue,listvalue.get('name',''),filename)
-                    elif type( listvalue) == type(u''):
-                        tmpsearch=os.path.join(os.path.split(filename)[0],self.objectnames[key],listvalue+'.ddd')
-                        fname = glob.glob(tmpsearch)
-                        if len(fname)==0:
-                            raise Exception('The file '+tmpsearch+' does not exist!')
-                        tmpname,tmptype,res,tmpfilename=self.handler.load(fname[0],expected_type=key)
-                        tmpobj = self.recload(tmptype,res,tmpname,fname[0])
-                    new_children.append(tmpobj)
-            else:
-                #print key + ': '+ str(value)
-                new_data[key]=value
-        newobj = DataObject(data=new_data, name=name, objtype=objtype, children=new_children)
-        newobj.update_hash()
-        tmp=self.tree.get(newobj.hash,None)
-        if not tmp:
-            print "Object does not exist in repo"
-        return newobj
-        
-    
-            
-    def load(self,path):
-        print "Loading DDD DB"
-        self.root_folder = path
-        flist = glob.glob(path+'/*.ddd')
-        if len(flist)==0:
-            print "No .ddd file found in: "+path
-            return
-        elif len(flist)>1:
-            print "Multiple .ddd files found in: "+path
-            print "The root-level of a DDD db should contain only one file"
-            return
-        else:
-            print "Found file: "+flist[0]
-            name,level,res,filename=self.handler.load(flist[0])
-            
-            if level=='project' or level == 'component':
-                if os.path.isfile(os.path.join('repo','repo.ddd')):
-                    with open(os.path.join('repo','repo.ddd'),'r') as fp:
-                        tmp = json.load(fp,cls=DDDDecoder)
-                        orphans = tmp['tree'].copy()
-                        for t,o in tmp['tree'].iteritems():
-                            o.hash=t
-                            for idx,c in enumerate(o.children):
-                                o.children[idx]=tmp['tree'][c]
-                                orphans.pop(c,None)
-                        r=DataObject(name='LocalRepository', objtype='repo')
-                        self.root.children.append(r)
-                        for h in orphans:
-                            print "orphan in repo: "+orphans[h].objtype+' '+h
-                            if orphans[h].objtype=='project':
-                                r.children.append(orphans[h])  
-                        r.visit(HashVisitor(self.tree))
-                tmpobj=self.recload(level,res,name,flist[0])
-                
-                self.root.children.append(tmpobj)
-                self.root.visit(HashVisitor(self.tree))
-                return tmpobj.hash
-                
-            elif level == 'variable':
-                print "Loading of single variables is not supported"
     
     def check(self,hash):
         print "Checking current Project"
         e = 0   
         visitor=CheckVisitor()
         self.objects[hash].visit(visitor)
-        print visitor.variable_versions
-        print visitor.found_variables
-        hash_by_name = {}
-        for vname,usage in visitor.variable_versions.items():
-            if len(usage.keys())>1:
-                print "Inconsistent Versions used for: "+vname
-                for v in usage:
-                    print " - Version: "+v+' in '+''.join(map(lambda x:self.modulenames[x],usage[v]))
-                e+=1
-            hash_by_name[vname]=usage.keys()[0]
-        for vname,value in visitor.found_variables.iteritems():
-            if len(value.get('output',[]))>1:
-                print "Multiple Outputs for: "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:self.modulenames[x],value['output']))
-                e+=1
-            if len(value.get('input',[]))>0:
-                if len(value.get('output',[]))==0:
+        
+        for comp in visitor.found_components:
+            for vname,usage in visitor.variable_versions[comp].items():
+                if len(usage.keys())>1:
+                    print "Inconsistent Versions used for: "+vname
+                    for v in usage:
+                        print " - Version: "+v+' in '+''.join(map(lambda x:self.modulenames[x],usage[v]))
                     e+=1
-                    print "Input with no Output for "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:self.modulenames[x],value['input']))
+            for vname,value in visitor.found_variables[comp].iteritems():
+                if len(value.get('output',[]))>1:
+                    print "Multiple Outputs for: "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:self.modulenames[x],value['output']))
+                    e+=1
+                if len(value.get('input',[]))>0:
+                    if len(value.get('output',[]))==0:
+                        e+=1
+                        print "Input with no Output for "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:self.modulenames[x],value['input']))
         if e>0:
             print "Project is not consistent, "+str(e)+" errors found"
         else:
