@@ -43,6 +43,10 @@ class CheckVisitor:
 #                 self.found_variables[self.component_stack[-1]][v.name][v.scope].append(self.component_stack[-1])
         elif isinstance(obj, DddVariable):
             self.variable_versions[obj.name][obj.datatype.hash].append(self.component_stack[-1])
+            #add variable once at its component (interface variables)
+            conversion = {'input':'output','output':'input'}
+            self.found_variables[self.component_stack[-1]][obj.name][conversion.get(obj.scope,obj.scope)].append(self.component_stack[-1])
+            #add variable also at its "grandparent"
             self.found_variables[self.component_stack[-2]][obj.name][obj.scope].append(self.component_stack[-1])
     def in_order(self,obj):
         pass
@@ -209,21 +213,23 @@ class DB:
         visitor=CheckVisitor()
         self.objects[hash].visit(visitor)
         
+        
+        for vname,usage in visitor.variable_versions.items():
+            if len(usage.keys())>1:
+                print "Inconsistent Versions used for: "+vname
+                for v in usage:
+                    print " - Version: "+v+' in '+', '.join(map(lambda x:self.modulenames[x],usage[v]))
+                e+=1
         for comp in visitor.found_components:
-            for vname,usage in visitor.variable_versions[comp].items():
-                if len(usage.keys())>1:
-                    print "Inconsistent Versions used for: "+vname
-                    for v in usage:
-                        print " - Version: "+v+' in '+''.join(map(lambda x:self.modulenames[x],usage[v]))
-                    e+=1
             for vname,value in visitor.found_variables[comp].iteritems():
                 if len(value.get('output',[]))>1:
                     print "Multiple Outputs for: "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:self.modulenames[x],value['output']))
                     e+=1
                 if len(value.get('input',[]))>0:
                     if len(value.get('output',[]))==0:
-                        e+=1
-                        print "Input with no Output for "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:self.modulenames[x],value['input']))
+                        if not (comp in set( value['input']) and len(self.objects[comp].subcomponents)==0):
+                            e+=1
+                            print "Input with no Output for "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:self.modulenames[x],value['input']))
         if e>0:
             print "Project is not consistent, "+str(e)+" errors found"
         else:
