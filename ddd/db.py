@@ -6,6 +6,7 @@ import os
 import pystache
 from fileinput import filename
 from collections import defaultdict
+from duplicity.path import Path
 
 class SourceVisitor:
     def __init__(self):
@@ -36,13 +37,13 @@ class CheckVisitor:
         self.variable_versions = defaultdict(lambda : defaultdict(lambda: []))
     def pre_order(self,obj):
         if isinstance(obj, DddComponent):
-            self.component_stack.append(obj.hash)
-            self.found_components.append(obj.hash)
+            self.component_stack.append(obj.getHash())
+            self.found_components.append(obj.getHash())
             self.found_variables[self.component_stack[-1]]=defaultdict(lambda :dict({'input':[],'output':[],'local':[]}))
 #             for v in obj.variablelist:
 #                 self.found_variables[self.component_stack[-1]][v.name][v.scope].append(self.component_stack[-1])
         elif isinstance(obj, DddVariable):
-            self.variable_versions[obj.name][obj.datatype.hash].append(self.component_stack[-1])
+            self.variable_versions[obj.name][obj.datatype.getHash()].append(self.component_stack[-1])
             #add variable once at its component (interface variables)
             conversion = {'input':'output','output':'input'}
             self.found_variables[self.component_stack[-1]][obj.name][conversion.get(obj.scope,obj.scope)].append(self.component_stack[-1])
@@ -68,7 +69,7 @@ class HashVisitor:
     def in_order(self,obj):
         pass
     def post_order(self,obj):
-        obj.update_hash()
+        obj.getHash()
         self.d[obj.hash]=obj
 
 class ViewerVisitor:
@@ -90,8 +91,11 @@ class ViewerVisitor:
 class DataObject:
     def __init__(self):
         self.hash=None
+        self.loaded = False
     def getChildren(self):
         return []
+    def appendChild(self,obj):
+        raise NotImplementedError
     def visit(self,visitor):
         visitor.pre_order(self)
         
@@ -102,12 +106,13 @@ class DataObject:
         visitor.post_order(self)
         
     def getJsonDict(self,hashed=False):
-        raise NotImplementedError
-    def update_hash(self):
+        return {'objecttype':self.__class__.getKey(),
+                'children':[x.getHash() if hashed else x.getJsonDict(hashed) for x in self.getChildren()]}
+    def getHash(self):
         tmpstring=json.dumps(self.getJsonDict(hashed=True),sort_keys=True)
         print "Calculating Hash on: "+tmpstring
         newh=hashlib.sha1(tmpstring).hexdigest()
-        self.hash=newh
+        return newh
 
 class DddDatatype(DataObject):
     def __init__(self,basetype='',conversion=''):
@@ -115,8 +120,16 @@ class DddDatatype(DataObject):
         self.conversion=conversion
         
     def getJsonDict(self,hashed=False):
-        return {'basetype':self.basetype,
-               'conversion':self.conversion}
+        tmp = DataObject.getJsonDict(self,hashed)
+        tmp.update({'data':{'basetype':self.basetype,
+               'conversion':self.conversion}})
+        return tmp
+    @classmethod
+    def getChildKeys(cls):
+        return []
+    @classmethod
+    def getKey(cls):
+        return 'datatype'
         
 class DddComponent(DataObject):
     def __init__(self,variablelist=None,subcomponents=None):
@@ -129,10 +142,23 @@ class DddComponent(DataObject):
         else:
             self.subcomponents = []
     def getJsonDict(self,hashed=False):
-        return {'variablelist':sorted([(x.hash if hashed else x.getJsonDict()) for x in self.variablelist]),
-                'subcomponents':sorted([(x.hash if hashed else x.getJsonDict()) for x in self.subcomponents])}
+        tmp = DataObject.getJsonDict(self,hashed)
+        tmp.update({'data':{}})
+        return tmp
+        #return {'variablelist':sorted([(x.hash if hashed else x.getJsonDict()) for x in self.variablelist]),
+        #        'subcomponents':sorted([(x.hash if hashed else x.getJsonDict()) for x in self.subcomponents])}
     def getChildren(self):
         return self.variablelist + self.subcomponents
+    def appendChild(self, obj):
+        if isinstance(obj,DddVariable):
+            self.variablelist.append(obj)
+        elif isinstance(obj,DddComponent):
+            self.subcomponents.append(obj)
+        else:
+            raise Exception("Unsupported Child")
+    @classmethod
+    def getKey(cls):
+        return 'component'
     
 class DddVariable(DataObject):
     def __init__(self,name='',datatype=None,scope='local'):
@@ -142,9 +168,20 @@ class DddVariable(DataObject):
         DataObject.__init__(self)
         
     def getJsonDict(self,hashed=False):
-        return {'name':self.name,'datatype':(self.datatype.hash if hashed else self.datatype.getJsonDict()),'scope':self.scope}
+        tmp = DataObject.getJsonDict(self,hashed)
+        tmp.update({'data':{'name':self.name}})#,'children':([self.getChildren()[0].hash] if hashed else [self.getChildren()[0].getJsonDict()])}})
+        return tmp
     def getChildren(self):
         return [self.datatype]
+    def appendChild(self, obj):
+        if isinstance(obj,DddDatatype):
+            self.datatype = obj
+    @classmethod
+    def getChildKeys(cls):
+        return ['datatype']
+    @classmethod
+    def getKey(cls):
+        return 'variable'
                
 class DDDEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -154,14 +191,15 @@ class DDDEncoder(json.JSONEncoder):
             return json.JSONEncoder.default(self, obj)
         
 class DDDDecoder(json.JSONDecoder):
-    def __init__(self,encoding):
-            json.JSONDecoder.__init__(self, object_hook=self.dict_to_object)
-
-    def dict_to_object(self, d): 
+    def __init__(self,encoding,objects):
+        json.JSONDecoder.__init__(self, object_hook=self.dict_to_object)
+        self.variablefactory=DataObjectFactory(objects,DddVariable)    
+    def dict_to_object(self, d):
+        d.get('dddtype')
         if 'variablelist' in d:
             tmpvars=[]
             for var in d['variablelist']:
-                tmpvars.append(DddVariable(**var))
+                tmpvars.append(self.variablefactory(**var))
             return {'variablelist':tmpvars,'subcomponents':d.get('subcomponents',[])}
         elif 'basetype' in d:
             return DddDatatype(**d)
@@ -169,10 +207,84 @@ class DDDDecoder(json.JSONDecoder):
             return DddComponent(**(d['component']))
         else:
             return d
-    
+class DDDDecoderF:
+    def __init__(self,repo,index):
+        self.index=index
+        self.factory=DataObjectFactory()    
+        self.factory.add_class(DddVariable)
+        self.factory.add_class(DddDatatype) 
+        self.factory.add_class(DddComponent) 
+        self.repo=repo
+    def __call__(self, d): 
+        if 'component' in d:
+            tmpvars=[]
+            for var in d['component']['variablelist']:
+                if 'datatype' in var:
+                    var['datatype']=self.factory.create_by_class(DddDatatype,**var['datatype'])
+                tmpvars.append(self.factory.create_by_class(DddVariable,**var))
+            d['component']['variablelist']=tmpvars
+            tmpsubc=[]
+            for sub in d['component'].get('subcomponents',[]):
+                tmpsubc.append(self.index[sub])
+            d['component']['subcomponents']=tmpsubc
+            o = self.factory.create_by_class(DddComponent,**(d['component']))
+            self.repo.store(o)
+            return o
+        else:
+            return d
+
+class DataObjectRepository:
+    def __init__(self,path,factory,filehandler):
+        self.path=path
+        self.objects={}
+        self.filehandler = filehandler
+        self.factory = factory
+    def get(self,hash):
+        if hash in self.objects:
+            return self.objects[hash]
+        else:
+            data = self.filehandler.load(os.path.join(self.path,hash))
+            objecttype = data.get('objecttype','')
+            obj = self.factory.create_by_name(objecttype,**data['data'])
+            for c in data.get('children',[]):
+                obj.appendChild(self.get(c))
+            
+            if obj.getHash()!= hash:
+                raise Exception('Corrupt File')
+            self.objects[hash]=obj
+            return obj
+    def store(self,object):
+        h=object.getHash()
+        for c in object.getChildren():
+            self.store(c)
+        if h not in self.objects:
+            self.filehandler.dump(object.getJsonDict(hashed=True),os.path.join(self.path,h))
+            self.objects[h]=object
+
+class ComponentIndex:
+    def __init__(self,path):
+        self.path = path
+        self.index = {}
+    def get(self,name):
+        pass
+    def add(self,object):
+        pass
+class DataObjectFactory:
+    def __init__(self):
+        self.classes = {}
+        self.count = 0
+    def add_class(self,cls):
+        self.classes[cls.getKey()]=cls
+    def create_by_name(self,classname,**kwargs):
+        tmp = self.classes[classname](**kwargs)
+        self.count += 1
+        return tmp
+    def create_by_class(self,cls,**kwargs):
+        self.count += 1
+        return cls(**kwargs)
 class DB:
     
-    def __init__(self):
+    def __init__(self,repopath):
        
         self.objectnames = {'variable-list':None,
                             'variable':'variables/',
@@ -182,7 +294,7 @@ class DB:
                             'component-list':'*/'}
         
         self.handler = Handler()
-        
+        self.repopath = repopath
         
         self.wc_files = defaultdict(list)
         
@@ -190,28 +302,42 @@ class DB:
         self.index = {} # modulename:hash
         self.modulenames = {}
         
+        
+        self.factory = DataObjectFactory()
+        self.factory.add_class(DddVariable)
+        self.factory.add_class(DddDatatype)
+        self.factory.add_class(DddComponent)
+        self.repo=DataObjectRepository(os.path.join(repopath,'objects'),self.factory,Handler())
+        self.decoder = DDDDecoderF(self.repo,self.index)
+    
+    def open(self,repo): 
+        
+        for fname in glob.glob('repo/objects/*'):
+            print fname
+          
     def add(self,filename):
         modulename = os.path.splitext(os.path.basename(filename))[0]
         with open(filename,'r') as fp:
-            tmp=json.load(fp,cls=DDDDecoder)
-        tmpc = []
-        for sc in tmp.subcomponents:
-            if sc in self.index:
-                tmpc.append(self.index[sc])
-            else:
-                raise Exception("Subcomponent "+sc+" not found in Index")
-        tmp.subcomponents = tmpc
+            tmp=json.load(fp)
+        tmpc=self.decoder(tmp)
+#         for sc in tmp.subcomponents:
+#             if sc in self.index:
+#                 tmpc.append(self.index[sc])
+#             else:
+#                 raise Exception("Subcomponent "+sc+" not found in Index")
+#         tmp.subcomponents = tmpc
         hv = HashVisitor(self.objects)
-        tmp.visit(hv)
-        self.index[modulename]=tmp
-        self.modulenames[tmp.hash]=modulename
-        
+        h = tmpc.getHash()
+        self.index[modulename]=tmpc
+        self.modulenames[h]=modulename
+        with open(os.path.join(self.repopath,'index',modulename),'w') as fp:
+            fp.write(h)
     
     def check(self,hash):
         print "Checking current Project"
         e = 0   
         visitor=CheckVisitor()
-        self.objects[hash].visit(visitor)
+        self.repo.get(hash).visit(visitor)
         
         
         for vname,usage in visitor.variable_versions.items():
@@ -227,7 +353,7 @@ class DB:
                     e+=1
                 if len(value.get('input',[]))>0:
                     if len(value.get('output',[]))==0:
-                        if not (comp in set( value['input']) and len(self.objects[comp].subcomponents)==0):
+                        if not (comp in set( value['input']) and len(self.repo.get(comp).subcomponents)==0):
                             e+=1
                             print "Input with no Output for "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:self.modulenames[x],value['input']))
         if e>0:
