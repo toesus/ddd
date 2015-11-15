@@ -42,13 +42,14 @@ class CheckVisitor:
             self.found_variables[self.component_stack[-1]]=defaultdict(lambda :dict({'input':[],'output':[],'local':[]}))
 #             for v in obj.variablelist:
 #                 self.found_variables[self.component_stack[-1]][v.name][v.scope].append(self.component_stack[-1])
-        elif isinstance(obj, DddVariable):
-            self.variable_versions[obj.name][obj.datatype.getHash()].append(self.component_stack[-1])
+        elif isinstance(obj, DddVariableDecl):
+            #raise Exception
+            self.variable_versions[obj.definition.name][obj.definition.getHash()].append(self.component_stack[-1])
             #add variable once at its component (interface variables)
             conversion = {'input':'output','output':'input'}
-            self.found_variables[self.component_stack[-1]][obj.name][conversion.get(obj.scope,obj.scope)].append(self.component_stack[-1])
+            self.found_variables[self.component_stack[-1]][obj.definition.name][conversion.get(obj.scope,obj.scope)].append(self.component_stack[-1])
             #add variable also at its "grandparent"
-            self.found_variables[self.component_stack[-2]][obj.name][obj.scope].append(self.component_stack[-1])
+            self.found_variables[self.component_stack[-2]][obj.definition.name][obj.scope].append(self.component_stack[-1])
     def in_order(self,obj):
         pass
     def post_order(self,obj):
@@ -110,7 +111,7 @@ class DataObject:
                 'children':[x.getHash() if hashed else x.getJsonDict(hashed) for x in self.getChildren()]}
     def getHash(self):
         tmpstring=json.dumps(self.getJsonDict(hashed=True),sort_keys=True)
-        print "Calculating Hash on: "+tmpstring
+        #print "Calculating Hash on: "+tmpstring
         newh=hashlib.sha1(tmpstring).hexdigest()
         return newh
 
@@ -132,26 +133,28 @@ class DddDatatype(DataObject):
         return 'datatype'
         
 class DddComponent(DataObject):
-    def __init__(self,variablelist=None,subcomponents=None):
-        if variablelist is not None:
-            self.variablelist=variablelist
+    def __init__(self,name='',declarations=None,subcomponents=None):
+        self.name=name
+        self.variablescope=0
+        if declarations is not None:
+            self.declarations=declarations
         else:
-            self.variablelist=[]
+            self.declarations=[]
         if subcomponents is not None:
             self.subcomponents = subcomponents
         else:
             self.subcomponents = []
     def getJsonDict(self,hashed=False):
         tmp = DataObject.getJsonDict(self,hashed)
-        tmp.update({'data':{}})
+        tmp.update({'data':{'name':self.name}})
         return tmp
         #return {'variablelist':sorted([(x.hash if hashed else x.getJsonDict()) for x in self.variablelist]),
         #        'subcomponents':sorted([(x.hash if hashed else x.getJsonDict()) for x in self.subcomponents])}
     def getChildren(self):
-        return self.variablelist + self.subcomponents
+        return self.declarations + self.subcomponents
     def appendChild(self, obj):
-        if isinstance(obj,DddVariable):
-            self.variablelist.append(obj)
+        if isinstance(obj,DddVariableDecl):
+            self.declarations.append(obj)
         elif isinstance(obj,DddComponent):
             self.subcomponents.append(obj)
         else:
@@ -160,11 +163,10 @@ class DddComponent(DataObject):
     def getKey(cls):
         return 'component'
     
-class DddVariable(DataObject):
-    def __init__(self,name='',datatype=None,scope='local'):
+class DddVariableDef(DataObject):
+    def __init__(self,name='',datatype=None):
         self.name=name
         self.datatype=datatype
-        self.scope=scope
         DataObject.__init__(self)
         
     def getJsonDict(self,hashed=False):
@@ -181,7 +183,29 @@ class DddVariable(DataObject):
         return ['datatype']
     @classmethod
     def getKey(cls):
-        return 'variable'
+        return 'definition'
+
+class DddVariableDecl(DataObject):
+    def __init__(self,scope='local',definition=None):
+        self.definition=definition
+        self.scope=scope
+        DataObject.__init__(self)
+        
+    def getJsonDict(self,hashed=False):
+        tmp = DataObject.getJsonDict(self,hashed)
+        tmp.update({'data':{'scope':self.scope}})#,'children':([self.getChildren()[0].hash] if hashed else [self.getChildren()[0].getJsonDict()])}})
+        return tmp
+    def getChildren(self):
+        return [self.definition]
+    def appendChild(self, obj):
+        if isinstance(obj,DddVariableDef):
+            self.definition = obj
+    @classmethod
+    def getChildKeys(cls):
+        return ['definition']
+    @classmethod
+    def getKey(cls):
+        return 'declaration'
                
 class DDDEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -190,48 +214,23 @@ class DDDEncoder(json.JSONEncoder):
         else:
             return json.JSONEncoder.default(self, obj)
         
-class DDDDecoder(json.JSONDecoder):
-    def __init__(self,encoding,objects):
-        json.JSONDecoder.__init__(self, object_hook=self.dict_to_object)
-        self.variablefactory=DataObjectFactory(objects,DddVariable)    
-    def dict_to_object(self, d):
-        d.get('dddtype')
-        if 'variablelist' in d:
-            tmpvars=[]
-            for var in d['variablelist']:
-                tmpvars.append(self.variablefactory(**var))
-            return {'variablelist':tmpvars,'subcomponents':d.get('subcomponents',[])}
-        elif 'basetype' in d:
-            return DddDatatype(**d)
-        elif 'component' in d:
-            return DddComponent(**(d['component']))
-        else:
-            return d
-class DDDDecoderF:
+class WorkingCopyDecoder:
     def __init__(self,repo,index):
         self.index=index
-        self.factory=DataObjectFactory()    
-        self.factory.add_class(DddVariable)
-        self.factory.add_class(DddDatatype) 
-        self.factory.add_class(DddComponent) 
         self.repo=repo
-    def __call__(self, d): 
-        if 'component' in d:
-            tmpvars=[]
-            for var in d['component']['variablelist']:
-                if 'datatype' in var:
-                    var['datatype']=self.factory.create_by_class(DddDatatype,**var['datatype'])
-                tmpvars.append(self.factory.create_by_class(DddVariable,**var))
-            d['component']['variablelist']=tmpvars
-            tmpsubc=[]
-            for sub in d['component'].get('subcomponents',[]):
-                tmpsubc.append(self.index[sub])
-            d['component']['subcomponents']=tmpsubc
-            o = self.factory.create_by_class(DddComponent,**(d['component']))
-            self.repo.store(o)
-            return o
-        else:
-            return d
+    def __call__(self, d):
+        tmpdecl = []
+        for decl in d.get('declarations',[]):
+            datatype = DddDatatype(decl['definition']['datatype'])
+            vardef = DddVariableDef(name=decl['definition']['name'],datatype=datatype)
+            tmpdecl.append(DddVariableDecl(scope=decl['scope'],definition=vardef))
+        
+        tmpsubc=[]
+        for sub in d.get('subcomponents',[]):
+            tmpsubc.append(self.index[sub])
+        comp=DddComponent(name=d.get('name'),subcomponents=tmpsubc,declarations=tmpdecl)
+        self.repo.store(comp)   
+        return comp
 
 class DataObjectRepository:
     def __init__(self,path,factory,filehandler):
@@ -304,11 +303,12 @@ class DB:
         
         
         self.factory = DataObjectFactory()
-        self.factory.add_class(DddVariable)
+        self.factory.add_class(DddVariableDecl)
+        self.factory.add_class(DddVariableDef)
         self.factory.add_class(DddDatatype)
         self.factory.add_class(DddComponent)
         self.repo=DataObjectRepository(os.path.join(repopath,'objects'),self.factory,Handler())
-        self.decoder = DDDDecoderF(self.repo,self.index)
+        self.decoder = WorkingCopyDecoder(self.repo,self.index)
     
     def open(self,repo): 
         
@@ -319,7 +319,7 @@ class DB:
         modulename = os.path.splitext(os.path.basename(filename))[0]
         with open(filename,'r') as fp:
             tmp=json.load(fp)
-        tmpc=self.decoder(tmp)
+        tmpc=self.decoder(tmp['component'])
 #         for sc in tmp.subcomponents:
 #             if sc in self.index:
 #                 tmpc.append(self.index[sc])
@@ -344,18 +344,18 @@ class DB:
             if len(usage.keys())>1:
                 print "Inconsistent Versions used for: "+vname
                 for v in usage:
-                    print " - Version: "+v+' in '+', '.join(map(lambda x:self.modulenames[x],usage[v]))
+                    print " - Version: "+v+' in '+', '.join(map(lambda x:self.repo.get(x).name,usage[v]))
                 e+=1
         for comp in visitor.found_components:
             for vname,value in visitor.found_variables[comp].iteritems():
                 if len(value.get('output',[]))>1:
-                    print "Multiple Outputs for: "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:self.modulenames[x],value['output']))
+                    print "Multiple Outputs for: "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:self.repo.get(x).name,value['output']))
                     e+=1
                 if len(value.get('input',[]))>0:
                     if len(value.get('output',[]))==0:
                         if not (comp in set( value['input']) and len(self.repo.get(comp).subcomponents)==0):
                             e+=1
-                            print "Input with no Output for "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:self.modulenames[x],value['input']))
+                            print "Input with no Output for "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:self.repo.get(x).name,value['input']))
         if e>0:
             print "Project is not consistent, "+str(e)+" errors found"
         else:
