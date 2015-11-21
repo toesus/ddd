@@ -1,13 +1,35 @@
 {
     "component": {
-        "variable-list": [
+        "name":"ModuleB",
+        "subcomponents":["SubmoduleB"],
+        "declarations":[
             {
-                "variable":"VariableC",
-                    "type": "local"
+            "definition":{
+                "name":"Variable2",
+                "datatype":{"basetype":"sint16","conversion":" "}
+                },
+            "scope": "output"
             },
             {
-                "variable":"VariableB",
-                    "type": "output"
+            "definition":{
+                "name":"submoduleinput",
+                "datatype":{"basetype":"sint16","conversion":" "}
+                },
+            "scope": "input"
+            },
+            {
+            "definition":{
+                "name":"submoduleoutput",
+                "datatype":{"basetype":"sint16","conversion":" "}
+                },
+            "scope": "output"
+            },
+   {
+            "definition":{
+                "name":"missingvar",
+                "datatype":{"basetype":"sint16","conversion":" "}
+                },
+            "scope": "input"
             }
         ]
     }
