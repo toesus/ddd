@@ -16,9 +16,14 @@ def main():
     parser = ArgumentParser()
     subparsers = parser.add_subparsers(help='Supported Subcommands',dest='subcommand')
     parser_c = subparsers.add_parser('check', help='Check the DDD Project for consistency')
+    parser_c.add_argument('--hash',help='Hash of the Object to check', nargs='?')
+    parser_c.add_argument(dest='name', help='Name of the Object in the Index to check', nargs='?')
     parser_v = subparsers.add_parser('view', help='Display the DDD Repository in a html page')
     parser_commit = subparsers.add_parser('commit', help='Commit the DDD Object(s) to a local repository')
-    parser.add_argument(dest="paths", help="Path to root folder of DDD Repository", metavar="path", nargs='+')
+    parser_add = subparsers.add_parser('add', help='Add a component to the index of a local repository')
+    parser_add.add_argument(dest="dddfile", help="Filename of .ddd to add", metavar="dddfile", nargs=1)
+    
+    parser.add_argument(dest="paths", help="Path to root folder of DDD Repository", metavar="path", nargs=1)
     
     parser_export = subparsers.add_parser('export', help='Commit the DDD Object(s) to a local repository')
     parser_export.add_argument('--source',dest='source',action='store_true',help='Export the source for the current project')
@@ -29,26 +34,17 @@ def main():
     
     paths = args.paths
     
-    db = DB()
-    
-    print "Load component from "+paths[0]
-    #db.load('db/dumptest')
-    h=db.load(paths[0])
-    
-    print "Loaded..."
-    print h
+    print "Open repo "+paths[0]
+    db = DB(paths[0])
     
     
     
-    for t in db.objectnames:
-        print t + ':'
-        for o in [x for x in db.tree.keys() if db.tree[x].objtype==t ]:
-        #for o in map(lambda x: x if db.object_by_hash[x].keys()[0]==t else None ,db.object_by_hash.keys()):
-            if o:
-                print o+' : '+db.tree[o].name
-    
-    if args.subcommand=='check':
-        db.check(h)
+    if args.subcommand=='add':
+        print "Adding File "+args.dddfile[0]
+        db.add(args.dddfile[0])
+    elif args.subcommand=='check':
+        if args.name:
+            db.check(db.index.get(args.name).getHash())
     elif args.subcommand=='view':
         db.view()
     elif args.subcommand=='commit':
