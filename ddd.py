@@ -18,6 +18,7 @@ def main():
     parser_c = subparsers.add_parser('check', help='Check the DDD Project for consistency')
     parser_c.add_argument('--hash',help='Hash of the Object to check', nargs='?')
     parser_c.add_argument(dest='name', help='Name of the Object in the Index to check', nargs='?')
+    
     parser_v = subparsers.add_parser('view', help='Display the DDD Repository in a html page')
     parser_commit = subparsers.add_parser('commit', help='Commit the DDD Object(s) to a local repository')
     parser_add = subparsers.add_parser('add', help='Add a component to the index of a local repository')
@@ -27,7 +28,7 @@ def main():
     
     parser_export = subparsers.add_parser('export', help='Commit the DDD Object(s) to a local repository')
     parser_export.add_argument('--source',dest='source',action='store_true',help='Export the source for the current project')
-    
+    parser_export.add_argument(dest='name', help='Name of the Object in the Index to check', nargs='?')
     # Process arguments
     args = parser.parse_args()
     print str(args)
@@ -53,10 +54,10 @@ def main():
         else:
             print "Project is not consistent, committing not allowed"
     elif args.subcommand=='export':
-        if db.check(h)==0:
+        if db.check(db.index.get(args.name).getHash())==0 or True:
             if args.source:
                 print "Exporting Source"
-                db.export_source(h)
+                db.export_source(db.index.get(args.name).getHash())
                 
         else:
             print "Project is not consistent, exporting not allowed"

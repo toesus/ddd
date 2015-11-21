@@ -4,9 +4,7 @@ from ddd.file import Handler
 import hashlib
 import os
 import pystache
-from fileinput import filename
 from collections import defaultdict
-from duplicity.path import Path
 
 class SourceVisitor:
     def __init__(self):
@@ -221,7 +219,7 @@ class WorkingCopyDecoder:
     def __call__(self, d):
         tmpdecl = []
         for decl in d.get('declarations',[]):
-            datatype = DddDatatype(decl['definition']['datatype'])
+            datatype = DddDatatype(**decl['definition']['datatype'])
             vardef = DddVariableDef(name=decl['definition']['name'],datatype=datatype)
             tmpdecl.append(DddVariableDecl(scope=decl['scope'],definition=vardef))
         
@@ -310,7 +308,7 @@ class DB:
         
         self.wc_files = defaultdict(list)
         
-        self.objects = {} # hash:DataObject
+        #self.objects = {} # hash:DataObject
         
         self.modulenames = {}
         
@@ -336,7 +334,6 @@ class DB:
 #             else:
 #                 raise Exception("Subcomponent "+sc+" not found in Index")
 #         tmp.subcomponents = tmpc
-        hv = HashVisitor(self.objects)
         h = tmpc.getHash()
         self.index.add(tmpc)
         #self.index[modulename]=tmpc
@@ -391,13 +388,9 @@ class DB:
             json.dump({'tree':self.tree},fp,indent=4,sort_keys=True,cls=DDDEncoder)
     
     def export_source(self,hash,path='source'):
-        visitor = SourceVisitor()
-        self.tree[hash].visit(visitor)
-        print visitor.found_variables
         r = pystache.Renderer(search_dirs='./cfg/templates')
-        for m in visitor.found_variables:
-            print r.render_name('decl.h',visitor.found_variables[m])
-    
+        print r.render_name('decl.h',self.repo.get(hash))
+        
     def init(self,path='repo'):
         print "Initializing repoisitory structure in "+path+" ..."
         
