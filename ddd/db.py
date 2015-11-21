@@ -89,7 +89,7 @@ class ViewerVisitor:
     def post_order(self,obj):
         pass
 
-class DataObject:
+class DataObject(object):
     def __init__(self):
         self.hash=None
         self.loaded = False
@@ -227,7 +227,7 @@ class WorkingCopyDecoder:
         
         tmpsubc=[]
         for sub in d.get('subcomponents',[]):
-            tmpsubc.append(self.index[sub])
+            tmpsubc.append(self.index.get(sub))
         comp=DddComponent(name=d.get('name'),subcomponents=tmpsubc,declarations=tmpdecl)
         self.repo.store(comp)   
         return comp
@@ -261,13 +261,26 @@ class DataObjectRepository:
             self.objects[h]=object
 
 class ComponentIndex:
-    def __init__(self,path):
+    def __init__(self,path,repo):
         self.path = path
         self.index = {}
+        self.repo=repo
     def get(self,name):
-        pass
+        o = self.index.get(name,None)
+        if o is not None:
+            return o
+        else:
+            try:
+                with open(os.path.join(self.path,name),'r') as fp:
+                    h = fp.readline()
+                    return self.repo.get(h)
+            except IOError as e:
+                print name+ " does not exist in Index"
+            return None
     def add(self,object):
-        pass
+        self.index[object.name]=object
+        with open(os.path.join(self.path,object.name),'w') as fp:
+            fp.write(object.getHash())
 class DataObjectFactory:
     def __init__(self):
         self.classes = {}
@@ -298,7 +311,7 @@ class DB:
         self.wc_files = defaultdict(list)
         
         self.objects = {} # hash:DataObject
-        self.index = {} # modulename:hash
+        
         self.modulenames = {}
         
         
@@ -308,12 +321,9 @@ class DB:
         self.factory.add_class(DddDatatype)
         self.factory.add_class(DddComponent)
         self.repo=DataObjectRepository(os.path.join(repopath,'objects'),self.factory,Handler())
-        self.decoder = WorkingCopyDecoder(self.repo,self.index)
-    
-    def open(self,repo): 
         
-        for fname in glob.glob('repo/objects/*'):
-            print fname
+        self.index = ComponentIndex(os.path.join(repopath,'index'),self.repo)
+        self.decoder = WorkingCopyDecoder(self.repo,self.index)
           
     def add(self,filename):
         modulename = os.path.splitext(os.path.basename(filename))[0]
@@ -328,10 +338,11 @@ class DB:
 #         tmp.subcomponents = tmpc
         hv = HashVisitor(self.objects)
         h = tmpc.getHash()
-        self.index[modulename]=tmpc
+        self.index.add(tmpc)
+        #self.index[modulename]=tmpc
         self.modulenames[h]=modulename
-        with open(os.path.join(self.repopath,'index',modulename),'w') as fp:
-            fp.write(h)
+        #with open(os.path.join(self.repopath,'index',modulename),'w') as fp:
+        #    fp.write(h)
     
     def check(self,hash):
         print "Checking current Project"
