@@ -2,12 +2,15 @@
 import json
 from ddd.file import Handler
 from ddd.dataobjects import DddVariableDef,DddVariableDecl,\
-    DddDatatype, DddComponent, DataObject
+    DddDatatype, DddComponent, DataObject, DddCommit
 import visitors
 
+import getpass
 import os
+import datetime
 import pystache
 from collections import defaultdict
+import glob
 
 
                
@@ -85,6 +88,30 @@ class ComponentIndex:
         self.index[object.name]=object
         with open(os.path.join(self.path,object.name),'w') as fp:
             fp.write(object.getHash())
+            
+class VersionTag(object):
+    def __init__(self,path,repo):
+        self.path = path
+        self.repo = repo
+    def create(self,tag,commit):
+        filename=os.path.join(self.path,tag)
+        if os.path.isfile(filename):
+            raise Exception('Tag '+tag+' already exists')
+        with open(os.path.join(self.path,tag),'w') as fp:
+            fp.write(commit.getHash())
+    def get(self,tag):
+        try:
+            with open(os.path.join(self.path,tag),'r') as fp:
+                h = fp.readline()
+                return self.repo.get(h)
+        except IOError as e:
+            print tag + " is not existing"
+        return None
+    def keys(self):
+        return map(lambda x:os.path.split(x)[1],glob.glob(os.path.join(self.path,'*')))
+    def items(self):
+        return map(lambda x: (x,self.get(x)),self.keys())
+    
 class DataObjectFactory:
     def __init__(self):
         self.classes = {}
@@ -124,9 +151,11 @@ class DB:
         self.factory.add_class(DddVariableDef)
         self.factory.add_class(DddDatatype)
         self.factory.add_class(DddComponent)
+        self.factory.add_class(DddCommit)
         self.repo=DataObjectRepository(os.path.join(repopath,'objects'),self.factory,Handler())
         
         self.index = ComponentIndex(os.path.join(repopath,'index'),self.repo)
+        self.tags = VersionTag(os.path.join(repopath,'tags'),self.repo)
         self.decoder = WorkingCopyDecoder(self.repo,self.index)
           
     def add(self,filename):
@@ -176,22 +205,36 @@ class DB:
             print "Project is consistent"
         return e
     
-    def view(self,path='.'):
+    def view(self,hash=None, name=None):
         print "Viewing Repository..."
+        obj=[]
+        if hash is None:
+            if name is None:
+                print "Viewing all tags..."
+                for t,o in self.tags.items():
+                    obj.append(o)  
+            else:
+                obj = [self.index.get(name)]
+        else:
+            obj=[self.repo.get(hash)]
         r = pystache.Renderer(search_dirs='./cfg/templates')
         
-        visitor = ViewerVisitor()
-        self.root.visit(visitor)
-        viewerdata={'types':[]}
-        for k,v in visitor.data.iteritems():
-            viewerdata['types'].append({'type':k,'objects':v})
+        visitor = visitors.ViewerVisitor()
+        for o in obj:
+            o.visit(visitor)
+        viewerdata=visitor.data
+        viewerdata.update({'tags':[{'tag':t,'commit':o} for t,o in self.tags.items()]})
         with open('viewer.html','w') as fp:
-            fp.write(r.render_name('viewer.html',viewerdata))
+            fp.write(r.render_name('viewer.html',visitor.data))
     
-    def commit(self,path='repo'):
-        print "Commiting to local repository..."
-        with open(os.path.join(path,'repo.ddd'),'w') as fp:
-            json.dump({'tree':self.tree},fp,indent=4,sort_keys=True,cls=DDDEncoder)
+    def commit_and_tag(self,name,tag,message):
+        print "Creating Commit"
+        c=DddCommit(message=message,obj=self.index.get(name),user=getpass.getuser(),timestamp=datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
+        print "Commit hash: "+c.getHash()
+        self.repo.store(c)
+        print c.user
+        print "Adding Tag"
+        self.tags.create(tag,c)
     
     def export_source(self,hash,path='source'):
         r = pystache.Renderer(search_dirs='./cfg/templates')

@@ -20,7 +20,14 @@ def main():
     parser_c.add_argument(dest='name', help='Name of the Object in the Index to check', nargs='?')
     
     parser_v = subparsers.add_parser('view', help='Display the DDD Repository in a html page')
+    parser_v.add_argument('--hash',help='Hash of the Object to check', nargs='?')
+    parser_v.add_argument(dest='name', help='Name of the Object in the Index to check', nargs='?')
+    
     parser_commit = subparsers.add_parser('commit', help='Commit the DDD Object(s) to a local repository')
+    parser_commit.add_argument(dest='name', help='Name of the Object in the Index to check', nargs='?')
+    parser_commit.add_argument('--message',dest='message', help='Commit Message', nargs='?')
+    parser_commit.add_argument('--tag',dest='tag', help='Tag', nargs='?')
+    
     parser_add = subparsers.add_parser('add', help='Add a component to the index of a local repository')
     parser_add.add_argument(dest="dddfile", help="Filename of .ddd to add", metavar="dddfile", nargs=1)
     
@@ -47,10 +54,10 @@ def main():
         if args.name:
             status=db.check(db.index.get(args.name).getHash())
     elif args.subcommand=='view':
-        db.view()
+        db.view(name=args.name)
     elif args.subcommand=='commit':
-        if db.check(h)==0:
-            db.commit()
+        if db.check(db.index.get(args.name).getHash())==0 or True:
+            db.commit_and_tag(args.name, args.tag, args.message)
         else:
             print "Project is not consistent, committing not allowed"
     elif args.subcommand=='export':

@@ -4,17 +4,19 @@
 <title>Page Title</title>
 </head>
 <body>
-{{#types}}
-<h1>{{type}}</h1>
-{{#objects}}
-<a id="{{hash}}">{{hash}}</a> - {{name}} {{#wc}}WC{{/wc}} </br>
-{{#children}}
-<a href="#{{hash}}">{{hash}} - {{objtype}} {{name}}</a>
-</br>
-{{/children}}
-<pre>{{data}}</pre>
-</br>
-{{/objects}}
-{{/types}}
+<h1>Tags</h1>
+{{#tags}}
+{{>tags.html}}
+{{/tags}}
+<h1>Components</h1>
+{{#component}}
+{{>component.html}}
+{{/component}}
+<h1>Variable Definitions</h1>
+{{#definition}}
+{{>definition.html}}
+{{/definition}}
+
+
 </body>
 </html> 

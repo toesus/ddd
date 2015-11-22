@@ -1,0 +1,19 @@
+<h2>{{name}}</h2>
+<a id="{{getHash}}">{{getHash}}</a> </br>
+Subcomponents:</br>
+{{#subcomponents}}
+{{name}}: <a href="#{{getHash}}">{{getHash}}</a>
+</br>
+{{/subcomponents}}
+{{^subcomponents}}
+None</br>
+{{/subcomponents}}
+
+Variable Declarations:</br>
+{{#declarations}}
+{{scope}} - {{definition.name}}: <a href="#{{definition.getHash}}">{{definition.getHash}}</a>
+</br>
+{{/declarations}}
+{{^declarations}}
+None</br>
+{{/declarations}}

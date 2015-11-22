@@ -123,4 +123,27 @@ class DddVariableDecl(DataObject):
     @classmethod
     def getKey(cls):
         return 'declaration'
+
+class DddCommit(DataObject):
+    def __init__(self,message='',obj=None, user='',timestamp=None):
+        self.message=message
+        self.obj=obj
+        self.user = user
+        self.timestamp=timestamp
+        DataObject.__init__(self)
+    def getJsonDict(self, hashed=False):
+        tmp = DataObject.getJsonDict(self, hashed)
+        tmp.update({'data':{'message':self.message,
+                            'user':self.user,
+                            'timestamp':self.timestamp}})
+        return tmp
+    def getChildren(self):
+        return [self.obj]
+    def appendChild(self, obj):
+        if isinstance(obj,DataObject):
+            self.obj = obj
+    @classmethod
+    def getKey(cls):
+        return 'commit'
+    
     

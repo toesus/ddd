@@ -77,12 +77,9 @@ class ViewerVisitor:
         self.data = defaultdict(lambda:[])
         self.found={}
     def pre_order(self,obj):
-        if not self.found.get(obj.hash,None):
-            self.data[obj.objtype].append({'name':obj.name,
-                               'hash':obj.hash,
-                               'data':obj.data,
-                               'children':map(lambda c:{'hash':c.hash,'name':c.name,'objtype':c.objtype},obj.children)})
-            self.found.update({obj.hash:True})
+        if not self.found.get(obj.getHash(),None):
+            self.data[obj.getKey()].append(obj)
+            self.found.update({obj.getHash():True})
     def in_order(self,obj):
         pass
     def post_order(self,obj):
