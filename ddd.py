@@ -36,6 +36,9 @@ def main():
     parser_export = subparsers.add_parser('export', help='Commit the DDD Object(s) to a local repository')
     parser_export.add_argument('--source',dest='source',action='store_true',help='Export the source for the current project')
     parser_export.add_argument(dest='name', help='Name of the Object in the Index to check', nargs='?')
+    
+    parser_init = subparsers.add_parser('init', help='Initialize Repository Folder Structure')
+    
     # Process arguments
     args = parser.parse_args()
     print str(args)
@@ -56,7 +59,7 @@ def main():
     elif args.subcommand=='view':
         db.view(name=args.name)
     elif args.subcommand=='commit':
-        if db.check(db.index.get(args.name).getHash())==0 or True:
+        if db.check(db.index.get(args.name).getHash())==0:
             db.commit_and_tag(args.name, args.tag, args.message)
         else:
             print "Project is not consistent, committing not allowed"
@@ -65,9 +68,11 @@ def main():
             if args.source:
                 print "Exporting Source"
                 db.export_source(db.index.get(args.name).getHash())
-                
         else:
             print "Project is not consistent, exporting not allowed"
+    elif args.subcommand=='init':
+        for folder in ['index','objects','tags']:
+            os.makedirs(os.path.join(paths[0],folder))
     return status
     
 if __name__ == "__main__":
