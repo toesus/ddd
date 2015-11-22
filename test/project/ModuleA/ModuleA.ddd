@@ -5,7 +5,6 @@
             {
             "definition":{
                 "name":"Variable2",
-                "arraysize":[1],
                 "datatype":{"basetype":"sint16","conversion":" "}
                 },
             "scope": "output"

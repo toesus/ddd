@@ -8,7 +8,7 @@
                 "name":"Variable2",
                 "datatype":{"basetype":"sint16","conversion":" "}
                 },
-            "scope": "output"
+            "scope": "input"
             },
             {
             "definition":{
@@ -23,13 +23,6 @@
                 "datatype":{"basetype":"sint16","conversion":" "}
                 },
             "scope": "output"
-            },
-   {
-            "definition":{
-                "name":"missingvar",
-                "datatype":{"basetype":"sint16","conversion":" "}
-                },
-            "scope": "input"
             }
         ]
     }

@@ -19,7 +19,7 @@
             {
         "definition":{
         "name":"Variable2",
-        "datatype":{"basetype":"double",
+        "datatype":{"basetype":"sint16",
         "conversion":" "}},
                     "scope": "input"
             }
