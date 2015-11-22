@@ -38,14 +38,14 @@ def main():
     print "Open repo "+paths[0]
     db = DB(paths[0])
     
-    
+    status = 0
     
     if args.subcommand=='add':
         print "Adding File "+args.dddfile[0]
         db.add(args.dddfile[0])
     elif args.subcommand=='check':
         if args.name:
-            db.check(db.index.get(args.name).getHash())
+            status=db.check(db.index.get(args.name).getHash())
     elif args.subcommand=='view':
         db.view()
     elif args.subcommand=='commit':
@@ -61,8 +61,9 @@ def main():
                 
         else:
             print "Project is not consistent, exporting not allowed"
-            
+    return status
+    
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
     
     
