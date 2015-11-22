@@ -1,14 +1,30 @@
 {
     "component": {
-        "variable-list": [
+        "name":"ModuleA",
+        "declarations":[
             {
-                "variable":"VariableA",
-                "type": "output"
+            "definition":{
+                "name":"Variable2",
+                "arraysize":[1],
+                "datatype":{"basetype":"sint16","conversion":" "}
+                },
+            "scope": "output"
             },
             {
-                "variable":"VariableB",
-                "type": "input"
+            "definition":{
+                "name":"submoduleinput",
+                "datatype":{"basetype":"sint16","conversion":" "}
+                },
+            "scope": "output"
+            },
+            {
+            "definition":{
+                "name":"submoduleoutput",
+                "datatype":{"basetype":"sint16","conversion":" "}
+                },
+            "scope": "input"
             }
         ]
+
     }
 }
