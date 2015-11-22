@@ -11,6 +11,7 @@ import datetime
 import pystache
 from collections import defaultdict
 import glob
+import sys
 
 
                
@@ -217,7 +218,7 @@ class DB:
                 obj = [self.index.get(name)]
         else:
             obj=[self.repo.get(hash)]
-        r = pystache.Renderer(search_dirs='./cfg/templates')
+        r = pystache.Renderer(search_dirs=os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])),'./cfg/templates'))
         
         visitor = visitors.ViewerVisitor()
         for o in obj:
