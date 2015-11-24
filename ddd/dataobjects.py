@@ -27,9 +27,9 @@ class DataObject(object):
         return {'objecttype':self.__class__.getKey(),
                 'children':[x.getHash() if hashed else x.getJsonDict(hashed) for x in self.getChildren()]}
     def getHash(self):
-        tmpstring=json.dumps(self.getJsonDict(hashed=True),sort_keys=True)
+        tmpstring=json.dumps(self.getJsonDict(hashed=True),sort_keys=True,ensure_ascii=False)
         #print "Calculating Hash on: "+tmpstring
-        newh=hashlib.sha1(tmpstring).hexdigest()
+        newh=hashlib.sha1(tmpstring.encode('utf-8')).hexdigest()
         return newh
 
 class DddDatatype(DataObject):

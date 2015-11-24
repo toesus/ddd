@@ -12,6 +12,7 @@ import pystache
 from collections import defaultdict
 import glob
 import sys
+import codecs
 
 
                
@@ -161,8 +162,8 @@ class DB:
           
     def add(self,filename):
         modulename = os.path.splitext(os.path.basename(filename))[0]
-        with open(filename,'r') as fp:
-            tmp=json.load(fp)
+        with codecs.open(filename,'r',encoding='utf-8') as fp:
+            tmp=json.load(fp,encoding='utf-8')
         tmpc=self.decoder(tmp['component'])
 #         for sc in tmp.subcomponents:
 #             if sc in self.index:
@@ -225,7 +226,7 @@ class DB:
             o.visit(visitor)
         viewerdata=visitor.data
         viewerdata.update({'tags':[{'tag':t,'commit':o} for t,o in self.tags.items()]})
-        with open('viewer.html','w') as fp:
+        with codecs.open('viewer.html','w',encoding='utf-8') as fp:
             fp.write(r.render_name('viewer.html',visitor.data))
     
     def commit_and_tag(self,name,tag,message):
