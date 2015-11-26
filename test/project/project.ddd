@@ -2,12 +2,15 @@
     "component": {
     "name":"projectxx",
     "subcomponents":["ModuleA","ModuleB"],
-        "variables": {
-            "rootvar":{
-                "datatype":{"basetype":"sint16","conversion":" "},
-                "scope": "input"
-            }
+    "declarations":[
+        {
+        "scope": "input",
+        "definition":{
+            "datatype":{"basetype":"sint16","conversion":{"type":"1to1"}},
+            "name":"rootvar"
         }
+        }
+        ]
     }
 
 }
