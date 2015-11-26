@@ -1,8 +1,7 @@
 
 import json
 from ddd.file import Handler
-from ddd.dataobjects import DddVariableDef,DddVariableDecl,\
-    DddDatatype, DddComponent, DataObject, DddCommit
+from ddd.dataobjects import *
 import visitors
 
 import getpass
@@ -24,14 +23,16 @@ class DDDEncoder(json.JSONEncoder):
             return json.JSONEncoder.default(self, obj)
         
 class WorkingCopyDecoder:
-    def __init__(self,repo,index):
+    def __init__(self,repo,index,factory):
         self.index=index
         self.repo=repo
+        self.factory=factory
     def __call__(self, d):
         tmpdecl = []
         for decl in d.get('declarations',[]):
-            datatype = DddDatatype(**decl['definition']['datatype'])
-            vardef = DddVariableDef(name=decl['definition']['name'],datatype=datatype)
+            conversion = self.factory.create_by_name('conversion',**decl['definition']['datatype'].pop('conversion'))
+            datatype = DddDatatype(conversion=conversion,**decl['definition'].pop('datatype'))
+            vardef = DddVariableDef(datatype=datatype,**decl['definition'])
             tmpdecl.append(DddVariableDecl(scope=decl['scope'],definition=vardef))
         
         tmpsubc=[]
@@ -154,11 +155,13 @@ class DB:
         self.factory.add_class(DddDatatype)
         self.factory.add_class(DddComponent)
         self.factory.add_class(DddCommit)
+        self.factory.add_class(DddConversion)
+        
         self.repo=DataObjectRepository(os.path.join(repopath,'objects'),self.factory,Handler())
         
         self.index = ComponentIndex(os.path.join(repopath,'index'),self.repo)
         self.tags = VersionTag(os.path.join(repopath,'tags'),self.repo)
-        self.decoder = WorkingCopyDecoder(self.repo,self.index)
+        self.decoder = WorkingCopyDecoder(self.repo,self.index, self.factory)
           
     def add(self,filename):
         modulename = os.path.splitext(os.path.basename(filename))[0]

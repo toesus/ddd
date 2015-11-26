@@ -5,22 +5,29 @@
             {
                 "definition":{
                 "name":"submoduleinput",
-                "datatype":{"basetype":"sint16","conversion":" "}},
+                "datatype":{"basetype":"sint16",
+                            "unit":"°C",
+                            "conversion":{"type":"binary","fraction":3}
+                },
+                "min":34,
+                "max":234,
+                "displayformat":"6.3f"
+                },
 
                 "scope": "input"
             },
             {
                 "definition":{
                 "name":"submoduleoutput",
-                "datatype":{"basetype":"sint16","conversion":" "}},
+                "datatype":{"basetype":"sint16","conversion":{"type":"decimal","fraction":2}}},
 
                 "scope": "output"
             },
             {
         "definition":{
         "name":"Variable2",
-        "datatype":{"basetype":"sint16",
-        "conversion":" "}},
+        "datatype":{"basetype":"uint16",
+        "conversion":{"type":"1to1"}}},
                     "scope": "input"
             }
         ]

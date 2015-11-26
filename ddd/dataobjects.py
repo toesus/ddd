@@ -5,6 +5,8 @@ Created on 22.11.2015
 '''
 import json
 import hashlib
+import fractions
+import math
 
 class DataObject(object):
     def __init__(self):
@@ -32,19 +34,86 @@ class DataObject(object):
         newh=hashlib.sha1(tmpstring.encode('utf-8')).hexdigest()
         return newh
 
+class DddConversion(DataObject):
+    def __init__(self,type=None,fraction=0,numerator=None,denominator=None,offset=0):
+        self.factor=fractions.Fraction(1)
+        self.offset=offset
+        self.type=type
+        self.name='none'
+        
+        
+        if type=='binary':
+            if fraction>0:
+                self.factor=fractions.Fraction(1,2**fraction)
+            else:
+                self.factor=fractions.Fraction(2**(-fraction),1)
+        elif type=='decimal':
+            if fraction>0:
+                self.factor=fractions.Fraction(1,10**fraction)
+            else:
+                self.factor=fractions.Fraction(10**(-fraction),1)
+        elif type=='linear' or type is None:
+            try:
+                self.factor=fractions.Fraction(numerator,denominator)
+            except TypeError:
+                raise Exception("Only Rational Number factors are supported")
+            (m,e)=math.frexp(self.factor)
+            if m==0.5:
+                self.type='binary'
+                self.name='BIN'+str((e-1)*-1)
+            else:
+                e=math.log10(self.factor)
+                if int(e)==e:
+                    self.type='decimal'
+                    self.name='DEC'+str(int(e)*-1)
+                else:
+                    self.type='linear'
+                    self.name='LIN'+str(float(self.factor))
+        if self.factor==1:
+            self.type='1to1'
+            self.name='1TO1'
+        if self.offset!=0:
+            self.name=self.name+'_OFFS'+str(self.offset)
+                
+            
+    
+    def getJsonDict(self, hashed=False):
+        tmp = DataObject.getJsonDict(self, hashed=hashed)
+        tmp.update({'data':{'numerator':self.factor.numerator,
+                            'denominator':self.factor.denominator,
+                            'offset':self.offset}})
+        return tmp
+    
+    def get_name(self):
+        return self.name
+    
+    @classmethod
+    def getChildKeys(cls):
+        return []
+    @classmethod
+    def getKey(cls):
+        return 'conversion'
+    
+    
 class DddDatatype(DataObject):
-    def __init__(self,basetype='',conversion=''):
+    def __init__(self,basetype='',conversion=None,unit='-'):
         self.basetype=basetype
         self.conversion=conversion
+        self.unit=unit
         
     def getJsonDict(self,hashed=False):
         tmp = DataObject.getJsonDict(self,hashed)
         tmp.update({'data':{'basetype':self.basetype,
-               'conversion':self.conversion}})
+                            'unit':self.unit}})
         return tmp
-    @classmethod
-    def getChildKeys(cls):
-        return []
+    
+    def get_name(self):
+        return self.basetype.upper()+'_'+self.conversion.get_name()
+    def getChildren(self):
+        return [self.conversion]
+    def appendChild(self, obj):
+        if isinstance(obj,DddConversion):
+            self.conversion = obj
     @classmethod
     def getKey(cls):
         return 'datatype'
@@ -81,14 +150,20 @@ class DddComponent(DataObject):
         return 'component'
     
 class DddVariableDef(DataObject):
-    def __init__(self,name='',datatype=None):
+    def __init__(self,name='',datatype=None,min=0,max=0,displayformat=''):
         self.name=name
         self.datatype=datatype
+        self.min=min
+        self.max=max
+        self.displayformat=displayformat
         DataObject.__init__(self)
         
     def getJsonDict(self,hashed=False):
         tmp = DataObject.getJsonDict(self,hashed)
-        tmp.update({'data':{'name':self.name}})#,'children':([self.getChildren()[0].hash] if hashed else [self.getChildren()[0].getJsonDict()])}})
+        tmp.update({'data':{'name':self.name,
+                            'min':self.min,
+                            'max':self.max,
+                            'displayformat':self.displayformat}})#,'children':([self.getChildren()[0].hash] if hashed else [self.getChildren()[0].getJsonDict()])}})
         return tmp
     def getChildren(self):
         return [self.datatype]
