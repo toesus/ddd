@@ -28,6 +28,10 @@ commit: project_check build.txt
 view:
 	python $(DDD) view $(REPO)
 	xdg-open viewer.html
+    
+view_project: $(INDEX)/projectxx
+	python $(DDD) view projectxx $(REPO)
+	explorer viewer.html
 
 clean:
 	rm -rf $(REPO)
