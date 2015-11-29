@@ -66,10 +66,7 @@ def main():
         else:
             print "Project is not consistent, committing not allowed"
     elif args.subcommand=='export':
-        if db.check(db.index.get(args.name).getHash())==0 or True:
-            db.export(name=args.name, filename=args.output, template=args.template)
-        else:
-            print "Project is not consistent, exporting not allowed"
+        db.export(name=args.name, filename=args.output, template=args.template)
     elif args.subcommand=='init':
         for folder in ['index','objects','tags']:
             os.makedirs(os.path.join(paths[0],folder))

@@ -11,11 +11,11 @@ class SourceVisitor:
     def __init__(self):
         self.cur_component=''
         self.cur_var = {}
-        self.found_variables = defaultdict(lambda :dict({'definitions':[]}))
+        self.found_variables = {}
     
     def pre_order(self,obj):
         if isinstance(obj, DddVariableDef):
-            self.found_variables['default']['definitions'].append(obj)
+            self.found_variables[obj.name]=obj
     def in_order(self,obj):
         pass
     def post_order(self,obj):

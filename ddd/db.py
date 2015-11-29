@@ -272,11 +272,11 @@ class DB:
         
         v = SourceVisitor()
         tmp.visit(v)
-        out = {'groups':[]}
-        for section in v.found_variables:
-            v.found_variables[section]['definitions'].sort(key=lambda x: x.name)
-            out['groups'].append({'groupname':section,
-                        'definitions':sorted(v.found_variables[section]['definitions'],key=lambda x: x.name)})
+        out = {'groups':[{'groupname':'default','definitions':[]}]}
+        
+        for name,var in v.found_variables.items():
+            out['groups'][0]['definitions'].append(var)
+        out['groups'][0]['definitions'].sort(key=lambda x: x.name)
             
         with open(filename,'wb') as fp:
             fp.write(r.render_name('def.c',out))
