@@ -11,18 +11,11 @@ class SourceVisitor:
     def __init__(self):
         self.cur_component=''
         self.cur_var = {}
-        self.found_variables = defaultdict(lambda :dict({'hash':None,'name':None,'declarations':[],'definitions':[]}))
+        self.found_variables = defaultdict(lambda :dict({'definitions':[]}))
     
     def pre_order(self,obj):
-        if obj.objtype=='component':
-            self.cur_component=obj.name
-            self.found_variables[self.cur_component]['hash']=obj.hash
-            self.found_variables[self.cur_component]['name']=self.cur_component
-        elif obj.objtype=='variable-list':
-            self.cur_var.update({obj.children[0].hash:obj.data['type']})
-            if obj.data['type']=='output' or obj.data['type']=='local':
-                self.found_variables[self.cur_component]['definitions'].append(obj.children[0])
-            self.found_variables[self.cur_component]['declarations'].append(obj.children[0])
+        if isinstance(obj, DddVariableDef):
+            self.found_variables['default']['definitions'].append(obj)
     def in_order(self,obj):
         pass
     def post_order(self,obj):

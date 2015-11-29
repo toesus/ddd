@@ -12,6 +12,7 @@ from collections import defaultdict
 import glob
 import sys
 import codecs
+from ddd.visitors import SourceVisitor
 
 
                
@@ -132,6 +133,7 @@ class DB:
     
     def __init__(self,repopath):
        
+        self.configpath=os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])),'cfg')
         self.objectnames = {'variable-list':None,
                             'variable':'variables/',
                             'datatype':None,
@@ -241,9 +243,47 @@ class DB:
         print "Adding Tag"
         self.tags.create(tag,c)
     
-    def export_source(self,hash,path='source'):
-        r = pystache.Renderer(search_dirs='./cfg/templates')
-        print r.render_name('decl.h',self.repo.get(hash))
+    def export_decl(self,hash=None,name=None,filename=None):
+        
+        tmp = None
+        if hash is None:
+            if name is None:
+                raise Exception('Name or hash required')
+            else:
+                tmp = self.index.get(name)
+        else:
+            tmp = self.repo.get(hash)
+        r = pystache.Renderer(search_dirs=os.path.join(self.configpath,'templates'))
+        with open(filename,'wb') as fp:
+            fp.write(r.render_name('decl.h',tmp))      
+
+
+    def export_def(self,hash=None,name=None,filename=None):
+        
+        tmp = None
+        if hash is None:
+            if name is None:
+                raise Exception('Name or hash required')
+            else:
+                tmp = self.index.get(name)
+        else:
+            tmp = self.repo.get(hash)
+        r = pystache.Renderer(search_dirs=os.path.join(self.configpath,'templates'))
+        
+        v = SourceVisitor()
+        tmp.visit(v)
+        out = {'groups':[]}
+        for section in v.found_variables:
+            v.found_variables[section]['definitions'].sort(key=lambda x: x.name)
+            out['groups'].append({'groupname':section,
+                        'definitions':sorted(v.found_variables[section]['definitions'],key=lambda x: x.name)})
+            
+        with open(filename,'wb') as fp:
+            fp.write(r.render_name('def.c',out))
+    
+    def export(self,template='',**kwargs):
+        exportfunctions = {'def.c':self.export_def,'decl.h':self.export_decl}
+        exportfunctions.get(template)(**kwargs)
         
     def init(self,path='repo'):
         print "Initializing repoisitory structure in "+path+" ..."

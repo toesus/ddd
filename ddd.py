@@ -34,8 +34,10 @@ def main():
     parser.add_argument(dest="paths", help="Path to root folder of DDD Repository", metavar="path", nargs=1)
     
     parser_export = subparsers.add_parser('export', help='Commit the DDD Object(s) to a local repository')
-    parser_export.add_argument('--source',dest='source',action='store_true',help='Export the source for the current project')
-    parser_export.add_argument(dest='name', help='Name of the Object in the Index to check', nargs='?')
+    parser_export.add_argument('--template',dest='template',help='Export the source for the current project')
+    parser_export.add_argument(dest='name', help='Name of the Object in the Index to export', nargs='?')
+    parser_export.add_argument('--hash',help='Hash of the Object to export', nargs='?')
+    parser_export.add_argument('--output',help='Output Filename', nargs='?')
     
     parser_init = subparsers.add_parser('init', help='Initialize Repository Folder Structure')
     
@@ -65,9 +67,7 @@ def main():
             print "Project is not consistent, committing not allowed"
     elif args.subcommand=='export':
         if db.check(db.index.get(args.name).getHash())==0 or True:
-            if args.source:
-                print "Exporting Source"
-                db.export_source(db.index.get(args.name).getHash())
+            db.export(name=args.name, filename=args.output, template=args.template)
         else:
             print "Project is not consistent, exporting not allowed"
     elif args.subcommand=='init':
