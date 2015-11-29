@@ -5,14 +5,20 @@
             {
             "definition":{
                 "name":"Variable2",
-                "datatype":{"basetype":"uint16","conversion":{"type":"binary","fraction":-4}}
+                "datatype":{"basetype":"sint16","conversion":{"type":"linear","numerator":4,"denominator":10,"offset":10}}
                 },
             "scope": "output"
             },
             {
-            "definition":{
+                "definition":{
                 "name":"submoduleinput",
-                "datatype":{"basetype":"sint16","conversion":{"type":"1to1"}}
+                "datatype":{"basetype":"sint16",
+                            "unit":"dC",
+                            "conversion":{"type":"binary","fraction":3}
+                },
+                "min":34,
+                "max":234,
+                "displayformat":"6.3f"
                 },
             "scope": "output"
             },

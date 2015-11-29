@@ -6,7 +6,7 @@
                 "definition":{
                 "name":"submoduleinput",
                 "datatype":{"basetype":"sint16",
-                            "unit":"°C",
+                            "unit":"dC",
                             "conversion":{"type":"binary","fraction":3}
                 },
                 "min":34,
@@ -17,17 +17,18 @@
                 "scope": "input"
             },
             {
-                "definition":{
+            "definition":{
                 "name":"submoduleoutput",
-                "datatype":{"basetype":"sint16","conversion":{"type":"decimal","fraction":2}}},
+                "datatype":{"basetype":"sint16","conversion":{"type":"1to1"}}
+                },
 
                 "scope": "output"
             },
             {
-        "definition":{
-        "name":"Variable2",
-        "datatype":{"basetype":"uint16",
-        "conversion":{"type":"1to1"}}},
+            "definition":{
+                "name":"Variable2",
+                "datatype":{"basetype":"sint16","conversion":{"type":"linear","numerator":4,"denominator":10,"offset":10}}
+                },
                     "scope": "input"
             }
         ]

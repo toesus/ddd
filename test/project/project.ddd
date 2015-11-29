@@ -4,7 +4,7 @@
     "subcomponents":["ModuleA","ModuleB"],
     "declarations":[
         {
-        "scope": "input",
+        "scope": "local",
         "definition":{
             "datatype":{"basetype":"sint16","conversion":{"type":"1to1"}},
             "name":"rootvar"
