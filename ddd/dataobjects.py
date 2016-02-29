@@ -178,14 +178,15 @@ class DddVariableDef(DataObject):
         return 'definition'
 
 class DddVariableDecl(DataObject):
-    def __init__(self,scope='local',definition=None):
-        self.definition=definition
+    def __init__(self,scope='local',definitionref=None,condition=None,**kwargs):
+        self.definition=definitionref
         self.scope=scope
+        self.condition=condition
         DataObject.__init__(self)
         
     def getJsonDict(self,hashed=False):
         tmp = DataObject.getJsonDict(self,hashed)
-        tmp.update({'data':{'scope':self.scope}})#,'children':([self.getChildren()[0].hash] if hashed else [self.getChildren()[0].getJsonDict()])}})
+        tmp.update({'data':{'scope':self.scope,'condition':self.condition}})#,'children':([self.getChildren()[0].hash] if hashed else [self.getChildren()[0].getJsonDict()])}})
         return tmp
     def getChildren(self):
         return [self.definition]

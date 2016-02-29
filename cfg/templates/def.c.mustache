@@ -4,7 +4,18 @@
 /*@#groups@*/
 /* Start Group /*@groupname@*/ */
 /*@#definitions@*/
-/*@ datatype.basetype @*/ /*@ name @*/;
+/*@#output@*/#if /*@.@*/
+/*@/output@*/
+/*@ definition.datatype.basetype @*/ /*@ definition.name @*/;
+/*@#output@*/
+#else
+/*@#input@*/
+#if (/*@.@*/)
+#error Input condition activated while output condition deactivated!
+#endif
+/*@/input@*/
+#endif
+/*@/output@*/
 /*@/definitions@*/
 /* End Group /*@groupname@*/ */
 /*@/groups@*/

@@ -34,7 +34,7 @@ class WorkingCopyDecoder:
             conversion = self.factory.create_by_name('conversion',**decl['definition']['datatype'].pop('conversion'))
             datatype = DddDatatype(conversion=conversion,**decl['definition'].pop('datatype'))
             vardef = DddVariableDef(datatype=datatype,**decl['definition'])
-            tmpdecl.append(DddVariableDecl(scope=decl['scope'],definition=vardef))
+            tmpdecl.append(DddVariableDecl(definitionref=vardef,**decl))
         
         tmpsubc=[]
         for sub in d.get('subcomponents',[]):
@@ -276,7 +276,7 @@ class DB:
         
         for name,var in v.found_variables.items():
             out['groups'][0]['definitions'].append(var)
-        out['groups'][0]['definitions'].sort(key=lambda x: x.name)
+        out['groups'][0]['definitions'].sort(key=lambda x: x['definition'].name)
             
         with open(filename,'wb') as fp:
             fp.write(r.render_name('def.c',out))
