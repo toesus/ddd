@@ -57,18 +57,18 @@ class DddConversion(DataObject):
                 self.factor=fractions.Fraction(numerator,denominator)
             except TypeError:
                 raise Exception("Only Rational Number factors are supported")
-            (m,e)=math.frexp(self.factor)
-            if m==0.5:
-                self.type='binary'
-                self.name='BIN'+str((e-1)*-1)
+        (m,e)=math.frexp(self.factor)
+        if m==0.5:
+            self.type='binary'
+            self.name='BIN'+str((e-1)*-1)
+        else:
+            e=math.log10(self.factor)
+            if int(e)==e:
+                self.type='decimal'
+                self.name='DEC'+str(int(e)*-1)
             else:
-                e=math.log10(self.factor)
-                if int(e)==e:
-                    self.type='decimal'
-                    self.name='DEC'+str(int(e)*-1)
-                else:
-                    self.type='linear'
-                    self.name='LIN'+str(float(self.factor))
+                self.type='linear'
+                self.name='LIN'+str(float(self.factor))
         if self.factor==1:
             self.type='1to1'
             self.name='1TO1'
