@@ -11,11 +11,17 @@ class SourceVisitor:
     def __init__(self):
         self.cur_component=''
         self.cur_var = {}
-        self.found_variables = {}
+        self.found_variables = defaultdict(lambda:{'definition':None,'output':None,'input':[]})
+        #self.conditions = defaultdict(lambda:{'output':None,'input':[]})
     
     def pre_order(self,obj):
-        if isinstance(obj, DddVariableDef):
-            self.found_variables[obj.name]=obj
+        if isinstance(obj, DddVariableDecl):
+            self.found_variables[obj.definition.name]['definition']=obj.definition
+            if obj.scope=='output':
+                self.found_variables[obj.definition.name]['output']=obj.condition
+            else:
+                if obj.condition:
+                    self.found_variables[obj.definition.name]['input'].append(obj.condition)
     def in_order(self,obj):
         pass
     def post_order(self,obj):

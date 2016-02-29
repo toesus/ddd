@@ -8,7 +8,8 @@
                 "name":"Variable2",
                 "datatype":{"basetype":"sint16","conversion":{"type":"linear","numerator":4,"denominator":10,"offset":10}}
                 },
-            "scope": "input"
+            "scope": "input",
+            "condition":"SomeOtherDefine_D==103"
             },
             {
                 "definition":{
