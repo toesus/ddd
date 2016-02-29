@@ -6,7 +6,7 @@
                 "definition":{
                 "name":"submoduleinput",
                 "datatype":{"basetype":"sint16",
-                            "unit":"dC",
+                            "unit":"°C",
                             "conversion":{"type":"binary","fraction":3}
                 },
                 "min":34,
