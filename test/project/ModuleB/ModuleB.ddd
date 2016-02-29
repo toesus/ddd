@@ -9,7 +9,7 @@
                 "datatype":{"basetype":"sint16","conversion":{"type":"linear","numerator":4,"denominator":10,"offset":10}}
                 },
             "scope": "input",
-            "condition":"SomeOtherDefine_D==103"
+            "condition":"SomeOtherDefine_D<103"
             },
             {
                 "definition":{

@@ -253,7 +253,7 @@ class DB:
                 tmp = self.index.get(name)
         else:
             tmp = self.repo.get(hash)
-        r = pystache.Renderer(search_dirs=os.path.join(self.configpath,'templates'))
+        r = pystache.Renderer(search_dirs=os.path.join(self.configpath,'templates'),escape=lambda x:x)
         with open(filename,'wb') as fp:
             fp.write(r.render_name('decl.h',tmp))      
 
@@ -268,7 +268,7 @@ class DB:
                 tmp = self.index.get(name)
         else:
             tmp = self.repo.get(hash)
-        r = pystache.Renderer(search_dirs=os.path.join(self.configpath,'templates'))
+        r = pystache.Renderer(search_dirs=os.path.join(self.configpath,'templates'),escape=lambda x:x)
         
         v = SourceVisitor()
         tmp.visit(v)
