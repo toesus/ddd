@@ -12,7 +12,7 @@ from collections import defaultdict
 import glob
 import sys
 import codecs
-from ddd.visitors import SourceVisitor
+from ddd.visitors import SourceVisitor, ConditionVisitor
 
 
                
@@ -280,9 +280,30 @@ class DB:
             
         with open(filename,'wb') as fp:
             fp.write(r.render_name('def.c',out))
+        
+    def export_conditions(self,hash=None,name=None,filename=None):
+        tmp = None
+        if hash is None:
+            if name is None:
+                raise Exception('Name or hash required')
+            else:
+                tmp = self.index.get(name)
+        else:
+            tmp = self.repo.get(hash)
+        
+        r = pystache.Renderer(search_dirs=os.path.join(self.configpath,'templates'),escape=lambda x:x)
+        
+        v = ConditionVisitor()
+        tmp.visit(v)
+        
+        data = map(lambda x: {"condition":x,"last":False},v.conditions.keys())
+        data[-1]['last']=True
+        
+        with open(filename,'wb') as fp:
+            fp.write(r.render_name('conditions.json',{'conditions':data}))
     
     def export(self,template='',**kwargs):
-        exportfunctions = {'def.c':self.export_def,'decl.h':self.export_decl}
+        exportfunctions = {'def.c':self.export_def,'decl.h':self.export_decl,'conditions.json':self.export_conditions}
         exportfunctions.get(template)(**kwargs)
         
     def init(self,path='repo'):

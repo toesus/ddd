@@ -27,6 +27,19 @@ class SourceVisitor:
     def post_order(self,obj):
         pass
     
+class ConditionVisitor:
+    def __init__(self):
+        self.conditions = {}
+    
+    def pre_order(self,obj):
+        if isinstance(obj, DddVariableDecl):
+            if obj.condition:
+                self.conditions[obj.condition]=False
+    def in_order(self,obj):
+        pass
+    def post_order(self,obj):
+        pass
+    
 class CheckVisitor:
     def __init__(self):
         self.component_stack=['rootlevel']

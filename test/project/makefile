@@ -28,6 +28,10 @@ $(SOURCE)/SubmoduleB_decl.h:$(INDEX)/SubmoduleB project_check source
 $(SOURCE)/projectxx_def.c:$(INDEX)/projectxx project_check source
 	python $(DDD) export projectxx --template def.c --output $(SOURCE)/projectxx_def.c repo
 
+$(SOURCE)/conditions.dummy: $(INDEX)/projectxx
+	python $(DDD) export projectxx --template conditions.json --output $(SOURCE)/conditions.dummy repo
+conditions.json: $(SOURCE)/conditions.dummy
+	dcc $(SOURCE)/conditions.dummy -P -o conditions.json
 
 export_sources:$(SOURCE)/ModuleA_decl.h $(SOURCE)/ModuleB_decl.h $(SOURCE)/SubmoduleB_decl.h $(SOURCE)/projectxx_def.c
 	echo hallo

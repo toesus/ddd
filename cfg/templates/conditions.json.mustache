@@ -1,0 +1,11 @@
+{{=/*@ @*/=}}
+#include "../constants.h"
+{
+/*@#conditions@*/
+#if (/*@condition@*/)
+"/*@condition@*/":true/*@^last@*/,/*@/last@*/
+#else
+"/*@condition@*/":false/*@^last@*/,/*@/last@*/
+#endif
+/*@/conditions@*/
+}
