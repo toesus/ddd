@@ -27,7 +27,8 @@
             {
             "definition":{
                 "name":"submoduleoutput",
-                "datatype":{"basetype":"sint16","conversion":{"type":"1to1"}}
+                "datatype":{"basetype":"sint16","conversion":{"type":"1to1"}},
+                                "dimensions":[12]
                 },
             "scope": "output"
             }

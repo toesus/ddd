@@ -150,12 +150,13 @@ class DddComponent(DataObject):
         return 'component'
     
 class DddVariableDef(DataObject):
-    def __init__(self,name='',datatype=None,min=0,max=0,displayformat=''):
+    def __init__(self,name='',datatype=None,min=0,max=0,displayformat='',dimensions=None):
         self.name=name
         self.datatype=datatype
         self.min=min
         self.max=max
         self.displayformat=displayformat
+        self.dimensions=dimensions
         DataObject.__init__(self)
         
     def getJsonDict(self,hashed=False):
@@ -163,7 +164,8 @@ class DddVariableDef(DataObject):
         tmp.update({'data':{'name':self.name,
                             'min':self.min,
                             'max':self.max,
-                            'displayformat':self.displayformat}})#,'children':([self.getChildren()[0].hash] if hashed else [self.getChildren()[0].getJsonDict()])}})
+                            'displayformat':self.displayformat,
+                            'dimensions':self.dimensions}})#,'children':([self.getChildren()[0].hash] if hashed else [self.getChildren()[0].getJsonDict()])}})
         return tmp
     def getChildren(self):
         return [self.datatype]
