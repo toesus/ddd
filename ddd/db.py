@@ -140,19 +140,11 @@ class DB:
     def __init__(self,repopath):
        
         self.configpath=os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])),'cfg')
-        self.objectnames = {'variable-list':None,
-                            'variable':'variables/',
-                            'datatype':None,
-                            'project':None,
-                            'component':'*/',
-                            'component-list':'*/'}
         
         self.handler = Handler()
         self.repopath = repopath
         
         self.wc_files = defaultdict(list)
-        
-        #self.objects = {} # hash:DataObject
         
         self.modulenames = {}
         
@@ -179,10 +171,7 @@ class DB:
         tmpc=self.decoder(tmp)
         h = tmpc.getHash()
         self.index.add(tmpc)
-        #self.index[modulename]=tmpc
         self.modulenames[h]=modulename
-        #with open(os.path.join(self.repopath,'index',modulename),'w') as fp:
-        #    fp.write(h)
     
     def check(self,hash):
         print "Checking current Project"
