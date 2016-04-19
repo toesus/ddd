@@ -1,7 +1,6 @@
 {
     "component": {
         "name":"ModuleB",
-        "subcomponents":["SubmoduleB"],
         "declarations":[
             {
             "definition":{
@@ -11,19 +10,7 @@
             "scope": "input",
             "condition":"SomeOtherDefine_D<103"
             },
-            {
-                "definition":{
-                "name":"submoduleinput",
-                "datatype":{"basetype":"sint16",
-                            "unit":"°C",
-                            "conversion":{"type":"binary","fraction":3}
-                },
-                "min":34,
-                "max":234,
-                "displayformat":"6.3f"
-                },
-            "scope": "input"
-            },
+        
             {
             "definition":{
                 "name":"submoduleoutput",

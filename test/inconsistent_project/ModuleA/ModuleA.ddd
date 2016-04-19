@@ -5,24 +5,23 @@
             {
             "definition":{
                 "name":"Variable2",
-                "arraysize":[1],
-                "datatype":{"basetype":"sint16","conversion":" "}
+                "datatype":{"basetype":"uint16","conversion":{"type":"linear","numerator":4,"denominator":10,"offset":10}}
                 },
-            "scope": "output"
+            "scope": "output",
+            "condition":"Mydefine_D==1"
             },
             {
-            "definition":{
+                "definition":{
                 "name":"submoduleinput",
-                "datatype":{"basetype":"sint16","conversion":" "}
+                "datatype":{"basetype":"sint16",
+                            "unit":"°C",
+                            "conversion":{"type":"binary","fraction":3}
+                },
+                "min":34,
+                "max":234,
+                "displayformat":"6.3f"
                 },
             "scope": "output"
-            },
-            {
-            "definition":{
-                "name":"submoduleoutput",
-                "datatype":{"basetype":"sint16","conversion":" "}
-                },
-            "scope": "input"
             }
         ]
 

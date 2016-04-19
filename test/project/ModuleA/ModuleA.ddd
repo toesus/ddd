@@ -22,14 +22,6 @@
                 "displayformat":"6.3f"
                 },
             "scope": "output"
-            },
-            {
-            "definition":{
-                "name":"submoduleoutput",
-                "datatype":{"basetype":"sint16","conversion":{"type":"1to1"}},
-                                "dimensions":[12]
-                },
-            "scope": "input"
             }
         ]
 
