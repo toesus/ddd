@@ -16,6 +16,8 @@ DDD shall also generate a variable declaration c-header for each software compon
 DDD shall support the A2L file format, to integrate the resulting sw into common calibration tools used in the automotive industry.
 ## File formats
 All files used by DDD contain simple json formatting.
+### Project description
+Contains a list of components (or other (sub-)projects)
 ### Software component description
 The top level key `"component"` is mandatory, and it contains the follwing elements:
     
@@ -58,6 +60,19 @@ Example file:
 - - -
 ## Repository Structure
 objects,index,tags
-## Code Architecture
+## Code Structure
+### .ddd file handler
+asd
+### Repository handler
+interface,
+
+### DB Class
+Database class
+Supported functions:
+
+* add
+* check
+* commit
+
 
 ## Command Line Interface
