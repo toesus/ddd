@@ -29,19 +29,25 @@ class WorkingCopyDecoder:
         self.repo=repo
         self.factory=factory
     def __call__(self, d):
-        tmpdecl = []
-        for decl in d.get('declarations',[]):
-            conversion = self.factory.create_by_name('conversion',**decl['definition']['datatype'].pop('conversion'))
-            datatype = DddDatatype(conversion=conversion,**decl['definition'].pop('datatype'))
-            vardef = DddVariableDef(datatype=datatype,**decl['definition'])
-            tmpdecl.append(DddVariableDecl(definitionref=vardef,**decl))
-        
-        tmpsubc=[]
-        for sub in d.get('subcomponents',[]):
-            tmpsubc.append(self.index.get(sub))
-        comp=DddComponent(name=d.get('name'),subcomponents=tmpsubc,declarations=tmpdecl)
-        self.repo.store(comp)   
-        return comp
+        if 'component'in d:
+            tmpdecl = []
+            for decl in d['component'].get('declarations',[]):
+                conversion = self.factory.create_by_name('conversion',**decl['definition']['datatype'].pop('conversion'))
+                datatype = DddDatatype(conversion=conversion,**decl['definition'].pop('datatype'))
+                vardef = DddVariableDef(datatype=datatype,**decl['definition'])
+                tmpdecl.append(DddVariableDecl(definitionref=vardef,**decl))
+            
+            
+            comp=DddComponent(name=d['component'].get('name'),declarations=tmpdecl)
+            self.repo.store(comp)   
+            return comp
+        elif 'project' in d:
+            tmpsubc=[]
+            for sub in d['project'].get('components',[]):
+                tmpsubc.append(self.index.get(sub))
+            proj = DddProject(name=d['project']['name'],components=tmpsubc)
+            self.repo.store(proj)
+            return proj
 
 class DataObjectRepository:
     def __init__(self,path,factory,filehandler):
@@ -158,6 +164,7 @@ class DB:
         self.factory.add_class(DddComponent)
         self.factory.add_class(DddCommit)
         self.factory.add_class(DddConversion)
+        self.factory.add_class(DddProject)
         
         self.repo=DataObjectRepository(os.path.join(repopath,'objects'),self.factory,Handler())
         
@@ -169,13 +176,7 @@ class DB:
         modulename = os.path.splitext(os.path.basename(filename))[0]
         with codecs.open(filename,'r',encoding='utf-8') as fp:
             tmp=json.load(fp,encoding='utf-8')
-        tmpc=self.decoder(tmp['component'])
-#         for sc in tmp.subcomponents:
-#             if sc in self.index:
-#                 tmpc.append(self.index[sc])
-#             else:
-#                 raise Exception("Subcomponent "+sc+" not found in Index")
-#         tmp.subcomponents = tmpc
+        tmpc=self.decoder(tmp)
         h = tmpc.getHash()
         self.index.add(tmpc)
         #self.index[modulename]=tmpc
@@ -188,7 +189,7 @@ class DB:
         e = 0   
         visitor=visitors.CheckVisitor()
         self.repo.get(hash).visit(visitor)
-        
+        print visitor.found_variables
         
         for vname,usage in visitor.variable_versions.items():
             if len(usage.keys())>1:
@@ -203,9 +204,8 @@ class DB:
                     e+=1
                 if len(value.get('input',[]))>0:
                     if len(value.get('output',[]))==0:
-                        if not (comp in set( value['input']) and len(self.repo.get(comp).subcomponents)==0):
-                            e+=1
-                            print "Input with no Output for "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:self.repo.get(x).name,value['input']))
+                        e+=1
+                        print "Input with no Output for "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:self.repo.get(x).name,value['input']))
         if e>0:
             print "Project is not consistent, "+str(e)+" errors found"
         else:

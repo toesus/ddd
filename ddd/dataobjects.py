@@ -118,31 +118,45 @@ class DddDatatype(DataObject):
     def getKey(cls):
         return 'datatype'
         
+class DddProject(DataObject):
+    def __init__(self,name='',components=None):
+        self.name=name
+        if components is not None:
+            self.components = components
+        else:
+            self.components = []
+    def getJsonDict(self,hashed=False):
+        tmp = DataObject.getJsonDict(self,hashed)
+        tmp.update({'data':{'name':self.name}})
+        return tmp
+    def getChildren(self):
+        return self.components
+    def appendChild(self, obj):
+        if isinstance(obj,DddComponent):
+            self.components.append(obj)
+        else:
+            raise Exception("Unsupported Child")
+    @classmethod
+    def getKey(cls):
+        return 'project'
+
 class DddComponent(DataObject):
-    def __init__(self,name='',declarations=None,subcomponents=None):
+    def __init__(self,name='',declarations=None):
         self.name=name
         self.variablescope=0
         if declarations is not None:
             self.declarations=declarations
         else:
             self.declarations=[]
-        if subcomponents is not None:
-            self.subcomponents = subcomponents
-        else:
-            self.subcomponents = []
     def getJsonDict(self,hashed=False):
         tmp = DataObject.getJsonDict(self,hashed)
         tmp.update({'data':{'name':self.name}})
         return tmp
-        #return {'variablelist':sorted([(x.hash if hashed else x.getJsonDict()) for x in self.variablelist]),
-        #        'subcomponents':sorted([(x.hash if hashed else x.getJsonDict()) for x in self.subcomponents])}
     def getChildren(self):
-        return self.declarations + self.subcomponents
+        return self.declarations
     def appendChild(self, obj):
         if isinstance(obj,DddVariableDecl):
             self.declarations.append(obj)
-        elif isinstance(obj,DddComponent):
-            self.subcomponents.append(obj)
         else:
             raise Exception("Unsupported Child")
     @classmethod

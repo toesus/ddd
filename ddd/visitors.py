@@ -58,7 +58,7 @@ class CheckVisitor:
             self.variable_versions[obj.definition.name][obj.definition.getHash()].append(self.component_stack[-1])
             #add variable once at its component (interface variables)
             conversion = {'input':'output','output':'input'}
-            self.found_variables[self.component_stack[-1]][obj.definition.name][conversion.get(obj.scope,obj.scope)].append(self.component_stack[-1])
+            #self.found_variables[self.component_stack[-1]][obj.definition.name][conversion.get(obj.scope,obj.scope)].append(self.component_stack[-1])
             #add variable also at its "grandparent"
             self.found_variables[self.component_stack[-2]][obj.definition.name][obj.scope].append(self.component_stack[-1])
     def in_order(self,obj):
