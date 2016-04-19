@@ -178,7 +178,6 @@ class DB:
         e = 0   
         visitor=visitors.CheckVisitor()
         self.repo.get(hash).visit(visitor)
-        print visitor.found_variables
         
         for vname,usage in visitor.variable_versions.items():
             if len(usage.keys())>1:
