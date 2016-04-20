@@ -96,15 +96,17 @@ class DddConversion(DataObject):
     
     
 class DddDatatype(DataObject):
-    def __init__(self,basetype='',conversion=None,unit='-'):
+    def __init__(self,basetype='',conversion=None,unit='-',constant=False):
         self.basetype=basetype
         self.conversion=conversion
         self.unit=unit
+        self.constant=constant
         
     def getJsonDict(self,hashed=False):
         tmp = DataObject.getJsonDict(self,hashed)
         tmp.update({'data':{'basetype':self.basetype,
-                            'unit':self.unit}})
+                            'unit':self.unit,
+                            'constant':self.constant}})
         return tmp
     
     def get_name(self):
