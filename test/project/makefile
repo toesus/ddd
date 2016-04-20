@@ -1,9 +1,14 @@
 REPO=repo
 INDEX=$(REPO)/index
-SOURCE=sources
+SOURCE=source
 
-DDD=~/workspace/ddd/ddd.py
-
+ifeq ($(OS),Windows_NT)
+    DDD=c:/git/ddd/ddd.py
+    EXPLORER_CMD = explorer
+else
+    DDD=~/workspace/ddd/ddd.py
+    EXPLORER_CMD = xdg-open
+endif
 repo:
 	python $(DDD) init repo
 
@@ -45,11 +50,11 @@ commit: project_check build.txt
 
 view:
 	python $(DDD) view $(REPO)
-	xdg-open viewer.html
+	$(EXPLORER_CMD) viewer.html
     
 view_project: $(INDEX)/projectxx
 	python $(DDD) view projectxx $(REPO)
-	explorer viewer.html
+	$(EXPLORER_CMD) viewer.html
 
 clean:
 	rm -rf $(REPO)
