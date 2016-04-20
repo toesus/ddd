@@ -260,10 +260,14 @@ class DB:
         
         v = SourceVisitor()
         tmp.visit(v)
-        out = {'groups':[{'groupname':'default','definitions':[]}]}
+        out = {'groups':[{'groupname':'default','definitions':[]},
+                         {'groupname':'calibrations','definitions':[]}]}
         
         for name,var in v.found_variables.items():
-            out['groups'][0]['definitions'].append(var)
+            if var['definition'].datatype.constant:
+                out['groups'][1]['definitions'].append(var)
+            else:
+                out['groups'][0]['definitions'].append(var)
         out['groups'][0]['definitions'].sort(key=lambda x: x['definition'].name)
             
         with open(filename,'wb') as fp:
