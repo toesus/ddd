@@ -1,21 +1,30 @@
 {
-    "component": {
+    "ddd_type":"component",
         "name":"ModuleA",
         "declarations":[
             {
+            "ddd_type":"declaration",
             "definition":{
+                "ddd_type":"definition",
                 "name":"Variable2",
-                "datatype":{"basetype":"sint16","constant":true,"conversion":{"type":"linear","numerator":4,"denominator":10,"offset":10}}
+                "datatype":{
+                    "ddd_type":"datatype",
+                    "basetype":"sint16","constant":true,
+                    "conversion":{
+                        "ddd_type":"conversion","type":"linear","numerator":4,"denominator":10,"offset":10}}
                 },
             "scope": "output",
             "condition":"Mydefine_D==1"
             },
             {
+                "ddd_type":"declaration",
                 "definition":{
+                "ddd_type":"definition",
                 "name":"submoduleinput",
-                "datatype":{"basetype":"sint16",
+                "datatype":{"ddd_type":"datatype",
+                        "basetype":"sint16",
                             "unit":"°C",
-                            "conversion":{"type":"binary","fraction":3}
+                            "conversion":{"ddd_type":"conversion","type":"binary","fraction":3}
                 },
                 "min":34,
                 "max":234,
@@ -25,5 +34,5 @@
             }
         ]
 
-    }
+    
 }

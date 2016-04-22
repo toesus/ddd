@@ -1,24 +1,28 @@
 {
-    "component": {
+    "ddd_type":"component",
         "name":"ModuleB",
         "declarations":[
             {
+            "ddd_type":"declaration",
             "definition":{
+            "ddd_type":"definition",
                 "name":"Variable2",
-                "datatype":{"basetype":"sint16","constant":true,"conversion":{"type":"linear","numerator":4,"denominator":10,"offset":10}}
+                "datatype":{"ddd_type":"datatype","basetype":"sint16","constant":true,"conversion":{"ddd_type":"conversion","type":"linear","numerator":4,"denominator":10,"offset":10}}
                 },
             "scope": "input",
             "condition":"SomeOtherDefine_D<103"
             },
         
             {
+            "ddd_type":"declaration",
             "definition":{
+            "ddd_type":"definition",
                 "name":"submoduleoutput",
-                "datatype":{"basetype":"sint16","conversion":{"type":"1to1"}},
+                "datatype":{"ddd_type":"datatype","basetype":"sint16","conversion":{"ddd_type":"conversion","type":"1to1"}},
                                 "dimensions":[12]
                 },
             "scope": "output"
             }
         ]
-    }
+    
 }
