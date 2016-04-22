@@ -18,8 +18,6 @@ class DataObject(object):
         return cls.classkey
     def getChildren(self):
         return []
-    def appendChild(self,obj):
-        raise NotImplementedError
     def visit(self,visitor):
         visitor.pre_order(self)
         
@@ -107,10 +105,6 @@ class DddConversion(DataObject):
     def get_name(self):
         return self.name
     
-    @classmethod
-    def getChildKeys(cls):
-        return []
-    
     
 class DddDatatype(DataObject):
     classkey='datatype'
@@ -135,9 +129,6 @@ class DddDatatype(DataObject):
         return self.basetype.upper()+'_'+self.conversion.get_name()
     def getChildren(self):
         return [self.conversion]
-    def appendChild(self, obj):
-        if isinstance(obj,DddConversion):
-            self.conversion = obj
             
 class DddProject(DataObject):
     classkey='project'
@@ -154,11 +145,6 @@ class DddProject(DataObject):
         return tmp
     def getChildren(self):
         return self.components
-    def appendChild(self, obj):
-        if isinstance(obj,DddComponent):
-            self.components.append(obj)
-        else:
-            raise Exception("Unsupported Child")
 
 class DddComponent(DataObject):
     classkey='component'
@@ -176,11 +162,6 @@ class DddComponent(DataObject):
         return tmp
     def getChildren(self):
         return self.declarations
-    def appendChild(self, obj):
-        if isinstance(obj,DddVariableDecl):
-            self.declarations.append(obj)
-        else:
-            raise Exception("Unsupported Child")
     
 class DddVariableDef(DataObject):
     classkey='definition'
@@ -207,12 +188,6 @@ class DddVariableDef(DataObject):
         return tmp
     def getChildren(self):
         return [self.datatype]
-    def appendChild(self, obj):
-        if isinstance(obj,DddDatatype):
-            self.datatype = obj
-    @classmethod
-    def getChildKeys(cls):
-        return ['datatype']
 
 class DddVariableDecl(DataObject):
     classkey='declaration'
@@ -233,12 +208,6 @@ class DddVariableDecl(DataObject):
         return tmp
     def getChildren(self):
         return [self.definition]
-    def appendChild(self, obj):
-        if isinstance(obj,DddVariableDef):
-            self.definition = obj
-    @classmethod
-    def getChildKeys(cls):
-        return ['definition']
 
 class DddCommit(DataObject):
     classkey='commit'
@@ -257,8 +226,5 @@ class DddCommit(DataObject):
         return tmp
     def getChildren(self):
         return [self.obj]
-    def appendChild(self, obj):
-        if isinstance(obj,DataObject):
-            self.obj = obj
             
     
