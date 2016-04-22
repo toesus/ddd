@@ -1,14 +1,16 @@
+'''
+Created on 22.11.2015
 
-import json
+@author: killian
+'''
 from ddd.file import Handler
-from ddd.dataobjects import *
+from ddd.dataobjects import DataObjectFactory, DddCommit
 import visitors
 
 import getpass
 import os
 import datetime
 import pystache
-from collections import defaultdict
 import glob
 import sys
 import codecs
