@@ -16,37 +16,18 @@ from ddd.visitors import SourceVisitor, ConditionVisitor, PostVisitor
 
 
                
-class DDDEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, DataObject):
-            return obj.getJsonDict()
-        else:
-            return json.JSONEncoder.default(self, obj)
-        
-class WorkingCopyDecoder:
-    def __init__(self,repo,index,factory):
-        self.index=index
-        self.repo=repo
-        self.factory=factory
-    def __call__(self, data):
-        if data.keys()[0]=='ddd_index':
-            return self.index.get(data[data.keys()[0]])
-        elif data.keys()[0]=='ddd_hash':
-            return self.repo.get(data[data.keys()[0]])
-        else:
-            return self.factory.create_by_name(data.pop('ddd_type'),**data)
+
 
 class DataObjectRepository:
-    def __init__(self,path,decoder,filehandler):
+    def __init__(self,path,filehandler):
         self.path=path
         self.objects={}
         self.filehandler = filehandler
-        self.decoder = decoder
     def get(self,hash):
         if hash in self.objects:
             return self.objects[hash]
         else:
-            obj = self.filehandler.load(os.path.join(self.path,hash),object_hook=self.decoder)
+            obj = self.filehandler.load(os.path.join(self.path,hash))
             if obj.getHash()!= hash:
                 raise Exception('Corrupt File')
             self.objects[hash]=obj
@@ -55,7 +36,7 @@ class DataObjectRepository:
         def storage(object):
             h=object.getHash()
             if h not in self.objects:
-                self.filehandler.dump(object.dumpDict(hashed=True),os.path.join(self.path,h))
+                self.filehandler.dump(object,os.path.join(self.path,h))
                 self.objects[h]=object
         object.accept(PostVisitor(storage))
 
@@ -111,20 +92,20 @@ class DB:
        
         self.configpath=os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])),'cfg')
         
-        self.handler = Handler()
+        
         self.repopath = repopath
         
         self.factory = DataObjectFactory()
         
-        self.repo=DataObjectRepository(os.path.join(repopath,'objects'),None,Handler())
+        self.repo=DataObjectRepository(os.path.join(repopath,'objects'),None)
         
         self.index = ComponentIndex(os.path.join(repopath,'index'),self.repo)
         self.tags = VersionTag(os.path.join(repopath,'tags'),self.repo)
-        self.decoder = WorkingCopyDecoder(self.repo,self.index, self.factory)
-        self.repo.decoder=self.decoder
-          
+       
+        self.handler = Handler(self.repo,self.index,self.factory)
+        self.repo.filehandler=self.handler
     def add(self,filename):
-        tmp=self.handler.load(filename,self.decoder)
+        tmp=self.handler.load(filename)
         self.repo.store(tmp)
         self.index.add(tmp)
     
