@@ -28,26 +28,9 @@ class WorkingCopyDecoder:
         self.index=index
         self.repo=repo
         self.factory=factory
-    def __call__(self, d):
-        if 'component'in d:
-            tmpdecl = []
-            for decl in d['component'].get('declarations',[]):
-                conversion = self.factory.create_by_name('conversion',**decl['definition']['datatype'].pop('conversion'))
-                datatype = DddDatatype(conversion=conversion,**decl['definition'].pop('datatype'))
-                vardef = DddVariableDef(datatype=datatype,**decl['definition'])
-                tmpdecl.append(DddVariableDecl(definitionref=vardef,**decl))
-            
-            
-            comp=DddComponent(name=d['component'].get('name'),declarations=tmpdecl)
-            self.repo.store(comp)   
-            return comp
-        elif 'project' in d:
-            tmpsubc=[]
-            for sub in d['project'].get('components',[]):
-                tmpsubc.append(self.index.get(sub))
-            proj = DddProject(name=d['project']['name'],components=tmpsubc)
-            self.repo.store(proj)
-            return proj
+    def __call__(self, data):
+        print "hooked "+str(data)
+        return self.factory.create_by_name(data.pop('ddd_type'),**data)
 
 class DataObjectRepository:
     def __init__(self,path,factory,filehandler):
@@ -74,7 +57,7 @@ class DataObjectRepository:
         for c in object.getChildren():
             self.store(c)
         if h not in self.objects:
-            self.filehandler.dump(object.getJsonDict(hashed=True),os.path.join(self.path,h))
+            self.filehandler.dump(object.dumpDict(hashed=True),os.path.join(self.path,h))
             self.objects[h]=object
 
 class ComponentIndex:
@@ -167,10 +150,10 @@ class DB:
     def add(self,filename):
         modulename = os.path.splitext(os.path.basename(filename))[0]
         with codecs.open(filename,'r',encoding='utf-8') as fp:
-            tmp=json.load(fp,encoding='utf-8')
-        tmpc=self.decoder(tmp)
-        h = tmpc.getHash()
-        self.index.add(tmpc)
+            tmp=json.load(fp,encoding='utf-8',object_hook=self.decoder)
+        h = tmp.getHash()
+        self.repo.store(tmp)
+        self.index.add(tmp)
         self.modulenames[h]=modulename
     
     def check(self,hash):
