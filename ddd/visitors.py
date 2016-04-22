@@ -102,7 +102,7 @@ class ViewerVisitor:
         self.found={}
     def pre_order(self,obj):
         if not self.found.get(obj.getHash(),None):
-            self.data[obj.getKey()].append(obj)
+            self.data[obj.classkey].append(obj)
             self.found.update({obj.getHash():True})
     def in_order(self,obj):
         pass

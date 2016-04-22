@@ -8,14 +8,30 @@ import hashlib
 import fractions
 import math
 
+class DataObjectFactory:
+    classes={}
+    def __init__(self):
+        self.count = 0
+    def create_by_name(self,classname,**kwargs):
+        tmp = self.classes[classname](**kwargs)
+        self.count += 1
+        return tmp
+    def create_by_class(self,cls,**kwargs):
+        self.count += 1
+        return cls(**kwargs)
+
+def dddobject(key):
+    def ddddeco(cls):
+        cls.classkey=key
+        DataObjectFactory.classes[key]=cls
+        return cls
+    return ddddeco
+    
 class DataObject(object):
     classkey='dataobject'
     def __init__(self):
         self.hash=None
         self.loaded = False
-    @classmethod
-    def getKey(cls):
-        return cls.classkey
     
     def dumpDict(self,hashed=False,rec=False):
         if hashed and rec:
@@ -35,15 +51,15 @@ class DataObject(object):
                 d[key]=value.dumpDict(hashed=hashed,rec=True)
         return d
     def getJsonDict(self,hashed=False):
-        return {'ddd_type':self.__class__.getKey()}
+        return {'ddd_type':self.__class__.classkey}
     def getHash(self):
         tmpstring=json.dumps(self.dumpDict(hashed=True),sort_keys=True,ensure_ascii=False)
         #print "Calculating Hash on: "+tmpstring
         newh=hashlib.sha1(tmpstring.encode('utf-8')).hexdigest()
         return newh
 
+@dddobject('conversion')
 class DddConversion(DataObject):
-    classkey='conversion'
     def __init__(self,type=None,fraction=0,numerator=None,denominator=None,offset=0):
         self.factor=fractions.Fraction(1)
         self.offset=offset
@@ -99,9 +115,9 @@ class DddConversion(DataObject):
         visitor.pre_order(self)
         pass
         visitor.post_order(self)
-    
+
+@dddobject('datatype')
 class DddDatatype(DataObject):
-    classkey='datatype'
     def __init__(self,basetype='',conversion=None,unit='-',constant=False):
         self.basetype=basetype
         if not conversion:
@@ -126,9 +142,9 @@ class DddDatatype(DataObject):
         visitor.pre_order(self)
         self.conversion.accept(visitor)
         visitor.post_order(self)
-            
+
+@dddobject('project')
 class DddProject(DataObject):
-    classkey='project'
     def __init__(self,name='',components=None):
         self.name=name
         if components is not None:
@@ -147,8 +163,8 @@ class DddProject(DataObject):
             c.accept(visitor)
         visitor.post_order(self)
 
+@dddobject('component')
 class DddComponent(DataObject):
-    classkey='component'
     def __init__(self,name='',declarations=None):
         self.name=name
         self.variablescope=0
@@ -168,8 +184,8 @@ class DddComponent(DataObject):
             d.accept(visitor)
         visitor.post_order(self)
     
+@dddobject('definition')
 class DddVariableDef(DataObject):
-    classkey='definition'
     def __init__(self,name='',datatype=None,min=0,max=0,displayformat='',dimensions=None):
         self.name=name
         if not datatype:
@@ -197,8 +213,8 @@ class DddVariableDef(DataObject):
         self.datatype.accept(visitor)
         visitor.post_order(self)
 
+@dddobject('declaration')
 class DddVariableDecl(DataObject):
-    classkey='declaration'
     def __init__(self,scope='local',definition=None,condition=None):
         if not definition:
             self.definition=DddVariableDef()
@@ -220,8 +236,8 @@ class DddVariableDecl(DataObject):
         self.definition.accept(visitor)
         visitor.post_order(self)
 
+@dddobject('commit')
 class DddCommit(DataObject):
-    classkey='commit'
     def __init__(self,message='',obj=None, user='',timestamp=None):
         self.message=message
         self.obj=obj

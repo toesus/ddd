@@ -104,19 +104,7 @@ class VersionTag(object):
     def items(self):
         return map(lambda x: (x,self.get(x)),self.keys())
     
-class DataObjectFactory:
-    def __init__(self):
-        self.classes = {}
-        self.count = 0
-    def add_class(self,cls):
-        self.classes[cls.getKey()]=cls
-    def create_by_name(self,classname,**kwargs):
-        tmp = self.classes[classname](**kwargs)
-        self.count += 1
-        return tmp
-    def create_by_class(self,cls,**kwargs):
-        self.count += 1
-        return cls(**kwargs)
+
 class DB:
     
     def __init__(self,repopath):
@@ -127,13 +115,6 @@ class DB:
         self.repopath = repopath
         
         self.factory = DataObjectFactory()
-        self.factory.add_class(DddVariableDecl)
-        self.factory.add_class(DddVariableDef)
-        self.factory.add_class(DddDatatype)
-        self.factory.add_class(DddComponent)
-        self.factory.add_class(DddCommit)
-        self.factory.add_class(DddConversion)
-        self.factory.add_class(DddProject)
         
         self.repo=DataObjectRepository(os.path.join(repopath,'objects'),None,Handler())
         
