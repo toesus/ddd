@@ -9,7 +9,7 @@ import fractions
 import math
 
 class DataObject(object):
-    classkey='ddd_dataobject'
+    classkey='dataobject'
     def __init__(self):
         self.hash=None
         self.loaded = False
@@ -51,8 +51,8 @@ class DataObject(object):
         return newh
 
 class DddConversion(DataObject):
+    classkey='conversion'
     def __init__(self,type=None,fraction=0,numerator=None,denominator=None,offset=0):
-        DddConversion.classkey='ddd_conversion'
         self.factor=fractions.Fraction(1)
         self.offset=offset
         self.type=type
@@ -110,8 +110,8 @@ class DddConversion(DataObject):
     
     
 class DddDatatype(DataObject):
+    classkey='datatype'
     def __init__(self,basetype='',conversion=None,unit='-',constant=False):
-        DddDatatype.classkey='ddd_datatype'
         self.basetype=basetype
         if not conversion:
             self.conversion=DddConversion(type='binary',fraction=1)
@@ -137,8 +137,8 @@ class DddDatatype(DataObject):
             self.conversion = obj
             
 class DddProject(DataObject):
+    classkey='project'
     def __init__(self,name='',components=None):
-        DddProject.classkey='ddd_project'
         self.name=name
         if components is not None:
             self.components = components
@@ -157,8 +157,8 @@ class DddProject(DataObject):
             raise Exception("Unsupported Child")
 
 class DddComponent(DataObject):
+    classkey='component'
     def __init__(self,name='',declarations=None):
-        DddComponent.classkey='ddd_component'
         self.name=name
         self.variablescope=0
         if declarations is not None:
@@ -179,8 +179,8 @@ class DddComponent(DataObject):
             raise Exception("Unsupported Child")
     
 class DddVariableDef(DataObject):
+    classkey='definition'
     def __init__(self,name='',datatype=None,min=0,max=0,displayformat='',dimensions=None):
-        DddVariableDef.classkey='ddd_definition'
         self.name=name
         if not datatype:
             self.datatype=DddDatatype()
@@ -211,8 +211,8 @@ class DddVariableDef(DataObject):
         return ['datatype']
 
 class DddVariableDecl(DataObject):
+    classkey='declaration'
     def __init__(self,scope='local',definitionref=None,condition=None,**kwargs):
-        DddVariableDecl.classkey='ddd_declaration'
         if not definitionref:
             self.definition=DddVariableDef()
         else:
@@ -237,8 +237,8 @@ class DddVariableDecl(DataObject):
         return ['definition']
 
 class DddCommit(DataObject):
+    classkey='commit'
     def __init__(self,message='',obj=None, user='',timestamp=None):
-        DddCommit.classkey='ddd_commit'
         self.message=message
         self.obj=obj
         self.user = user
