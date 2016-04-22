@@ -6,7 +6,19 @@ Created on 22.11.2015
 from collections import defaultdict
 from ddd.dataobjects import DddVariableDef,DddVariableDecl,\
     DddDatatype, DddComponent
+
+class DddVisitor(object):
+    def pre_order(self,obj):
+        pass
+    def post_order(self,obj):
+        pass
     
+class PostVisitor(DddVisitor):
+    def __init__(self,f):
+        self.f=f
+    def post_order(self,obj):
+        self.f(obj)  
+        
 class SourceVisitor:
     def __init__(self):
         self.cur_component=''

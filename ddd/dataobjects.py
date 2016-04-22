@@ -16,16 +16,7 @@ class DataObject(object):
     @classmethod
     def getKey(cls):
         return cls.classkey
-    def getChildren(self):
-        return []
-    def visit(self,visitor):
-        visitor.pre_order(self)
-        
-        for c in self.getChildren():
-            c.visit(visitor)
-            visitor.in_order(self)
-        
-        visitor.post_order(self)
+    
     def dumpDict(self,hashed=False,rec=False):
         if hashed and rec:
             return {'ddd_hash':self.getHash()}
@@ -104,7 +95,10 @@ class DddConversion(DataObject):
     
     def get_name(self):
         return self.name
-    
+    def accept(self,visitor):
+        visitor.pre_order(self)
+        pass
+        visitor.post_order(self)
     
 class DddDatatype(DataObject):
     classkey='datatype'
@@ -127,8 +121,11 @@ class DddDatatype(DataObject):
     
     def get_name(self):
         return self.basetype.upper()+'_'+self.conversion.get_name()
-    def getChildren(self):
-        return [self.conversion]
+    
+    def accept(self,visitor):
+        visitor.pre_order(self)
+        self.conversion.accept(visitor)
+        visitor.post_order(self)
             
 class DddProject(DataObject):
     classkey='project'
@@ -143,8 +140,12 @@ class DddProject(DataObject):
         tmp.update({'name':self.name,
                     'components':self.components})
         return tmp
-    def getChildren(self):
-        return self.components
+    
+    def accept(self,visitor):
+        visitor.pre_order(self)
+        for c in self.components:
+            c.accept(visitor)
+        visitor.post_order(self)
 
 class DddComponent(DataObject):
     classkey='component'
@@ -160,8 +161,12 @@ class DddComponent(DataObject):
         tmp.update({'name':self.name,
                     'declarations': self.declarations})
         return tmp
-    def getChildren(self):
-        return self.declarations
+    
+    def accept(self,visitor):
+        visitor.pre_order(self)
+        for d in self.declarations:
+            d.accept(visitor)
+        visitor.post_order(self)
     
 class DddVariableDef(DataObject):
     classkey='definition'
@@ -186,8 +191,11 @@ class DddVariableDef(DataObject):
                     'dimensions':self.dimensions,
                     'datatype':self.datatype})
         return tmp
-    def getChildren(self):
-        return [self.datatype]
+    
+    def accept(self,visitor):
+        visitor.pre_order(self)
+        self.datatype.accept(visitor)
+        visitor.post_order(self)
 
 class DddVariableDecl(DataObject):
     classkey='declaration'
@@ -206,8 +214,11 @@ class DddVariableDecl(DataObject):
                     'condition':self.condition,
                     'definition':self.definition})
         return tmp
-    def getChildren(self):
-        return [self.definition]
+    
+    def accept(self,visitor):
+        visitor.pre_order(self)
+        self.definition.accept(visitor)
+        visitor.post_order(self)
 
 class DddCommit(DataObject):
     classkey='commit'
@@ -224,7 +235,10 @@ class DddCommit(DataObject):
                     'timestamp':self.timestamp,
                     'obj':self.obj})
         return tmp
-    def getChildren(self):
-        return [self.obj]
+    
+    def accept(self,visitor):
+        visitor.pre_order(self)
+        self.obj.accept(visitor)
+        visitor.post_order(self)
             
     

@@ -12,7 +12,7 @@ from collections import defaultdict
 import glob
 import sys
 import codecs
-from ddd.visitors import SourceVisitor, ConditionVisitor
+from ddd.visitors import SourceVisitor, ConditionVisitor, PostVisitor
 
 
                
@@ -52,12 +52,12 @@ class DataObjectRepository:
             self.objects[hash]=obj
             return obj
     def store(self,object):
-        h=object.getHash()
-        for c in object.getChildren():
-            self.store(c)
-        if h not in self.objects:
-            self.filehandler.dump(object.dumpDict(hashed=True),os.path.join(self.path,h))
-            self.objects[h]=object
+        def storage(object):
+            h=object.getHash()
+            if h not in self.objects:
+                self.filehandler.dump(object.dumpDict(hashed=True),os.path.join(self.path,h))
+                self.objects[h]=object
+        object.accept(PostVisitor(storage))
 
 class ComponentIndex:
     def __init__(self,path,repo):
@@ -126,11 +126,6 @@ class DB:
         self.handler = Handler()
         self.repopath = repopath
         
-        self.wc_files = defaultdict(list)
-        
-        self.modulenames = {}
-        
-        
         self.factory = DataObjectFactory()
         self.factory.add_class(DddVariableDecl)
         self.factory.add_class(DddVariableDef)
@@ -148,19 +143,15 @@ class DB:
         self.repo.decoder=self.decoder
           
     def add(self,filename):
-        modulename = os.path.splitext(os.path.basename(filename))[0]
-        with codecs.open(filename,'r',encoding='utf-8') as fp:
-            tmp=json.load(fp,encoding='utf-8',object_hook=self.decoder)
-        h = tmp.getHash()
+        tmp=self.handler.load(filename,self.decoder)
         self.repo.store(tmp)
         self.index.add(tmp)
-        self.modulenames[h]=modulename
     
     def check(self,hash):
         print "Checking current Project"
         e = 0   
         visitor=visitors.CheckVisitor()
-        self.repo.get(hash).visit(visitor)
+        self.repo.get(hash).accept(visitor)
         
         for vname,usage in visitor.variable_versions.items():
             if len(usage.keys())>1:
@@ -199,7 +190,7 @@ class DB:
         
         visitor = visitors.ViewerVisitor()
         for o in obj:
-            o.visit(visitor)
+            o.accept(visitor)
         viewerdata=visitor.data
         viewerdata.update({'tags':[{'tag':t,'commit':o} for t,o in self.tags.items()]})
         with codecs.open('viewer.html','w',encoding='utf-8') as fp:
@@ -242,7 +233,7 @@ class DB:
         r = pystache.Renderer(search_dirs=os.path.join(self.configpath,'templates'),escape=lambda x:x)
         
         v = SourceVisitor()
-        tmp.visit(v)
+        tmp.accept(v)
         out = {'groups':[{'groupname':'default','definitions':[]},
                          {'groupname':'calibrations','definitions':[]}]}
         
@@ -269,7 +260,7 @@ class DB:
         r = pystache.Renderer(search_dirs=os.path.join(self.configpath,'templates'),escape=lambda x:x)
         
         v = ConditionVisitor()
-        tmp.visit(v)
+        tmp.accept(v)
         
         data = map(lambda x: {"condition":x,"last":False},v.conditions.keys())
         data[-1]['last']=True
