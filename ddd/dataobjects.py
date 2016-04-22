@@ -9,9 +9,13 @@ import fractions
 import math
 
 class DataObject(object):
+    classkey='ddd_dataobject'
     def __init__(self):
         self.hash=None
         self.loaded = False
+    @classmethod
+    def getKey(cls):
+        return cls.classkey
     def getChildren(self):
         return []
     def appendChild(self,obj):
@@ -24,18 +28,31 @@ class DataObject(object):
             visitor.in_order(self)
         
         visitor.post_order(self)
-        
+    def dumpDict(self,hashed=False,rec=False):
+        if hashed and rec:
+            return {'ddd_hash':self.getHash()}
+        d = self.getJsonDict(hashed=False)
+        #print d
+        for key,value in d.items():
+            if type(value)==type([]):
+                tmplist=[]
+                for e in value:
+                    tmplist.append(e.dumpDict(hashed=hashed,rec=True))
+                d[key]=tmplist
+            if isinstance(value, DataObject):
+                d[key]=value.dumpDict(hashed=hashed,rec=True)
+        return d
     def getJsonDict(self,hashed=False):
-        return {'objecttype':self.__class__.getKey(),
-                'children':[x.getHash() if hashed else x.getJsonDict(hashed) for x in self.getChildren()]}
+        return {'ddd_type':self.__class__.getKey()}
     def getHash(self):
-        tmpstring=json.dumps(self.getJsonDict(hashed=True),sort_keys=True,ensure_ascii=False)
+        tmpstring=json.dumps(self.dumpDict(hashed=True),sort_keys=True,ensure_ascii=False)
         #print "Calculating Hash on: "+tmpstring
         newh=hashlib.sha1(tmpstring.encode('utf-8')).hexdigest()
         return newh
 
 class DddConversion(DataObject):
     def __init__(self,type=None,fraction=0,numerator=None,denominator=None,offset=0):
+        DddConversion.classkey='ddd_conversion'
         self.factor=fractions.Fraction(1)
         self.offset=offset
         self.type=type
@@ -78,10 +95,10 @@ class DddConversion(DataObject):
             
     
     def getJsonDict(self, hashed=False):
-        tmp = DataObject.getJsonDict(self, hashed=hashed)
-        tmp.update({'data':{'numerator':self.factor.numerator,
-                            'denominator':self.factor.denominator,
-                            'offset':self.offset}})
+        tmp = DataObject.getJsonDict(self, False)
+        tmp.update({'numerator':self.factor.numerator,
+                    'denominator':self.factor.denominator,
+                    'offset':self.offset})
         return tmp
     
     def get_name(self):
@@ -90,23 +107,25 @@ class DddConversion(DataObject):
     @classmethod
     def getChildKeys(cls):
         return []
-    @classmethod
-    def getKey(cls):
-        return 'conversion'
     
     
 class DddDatatype(DataObject):
     def __init__(self,basetype='',conversion=None,unit='-',constant=False):
+        DddDatatype.classkey='ddd_datatype'
         self.basetype=basetype
-        self.conversion=conversion
+        if not conversion:
+            self.conversion=DddConversion(type='binary',fraction=1)
+        else:
+            self.conversion=conversion
         self.unit=unit
         self.constant=constant
         
     def getJsonDict(self,hashed=False):
-        tmp = DataObject.getJsonDict(self,hashed)
-        tmp.update({'data':{'basetype':self.basetype,
-                            'unit':self.unit,
-                            'constant':self.constant}})
+        tmp = DataObject.getJsonDict(self,False)
+        tmp.update({'basetype':self.basetype,
+                    'unit':self.unit,
+                    'constant':self.constant,
+                    'conversion':self.conversion})
         return tmp
     
     def get_name(self):
@@ -116,12 +135,10 @@ class DddDatatype(DataObject):
     def appendChild(self, obj):
         if isinstance(obj,DddConversion):
             self.conversion = obj
-    @classmethod
-    def getKey(cls):
-        return 'datatype'
-        
+            
 class DddProject(DataObject):
     def __init__(self,name='',components=None):
+        DddProject.classkey='ddd_project'
         self.name=name
         if components is not None:
             self.components = components
@@ -129,7 +146,7 @@ class DddProject(DataObject):
             self.components = []
     def getJsonDict(self,hashed=False):
         tmp = DataObject.getJsonDict(self,hashed)
-        tmp.update({'data':{'name':self.name}})
+        tmp.update({'name':self.name})
         return tmp
     def getChildren(self):
         return self.components
@@ -138,12 +155,10 @@ class DddProject(DataObject):
             self.components.append(obj)
         else:
             raise Exception("Unsupported Child")
-    @classmethod
-    def getKey(cls):
-        return 'project'
 
 class DddComponent(DataObject):
     def __init__(self,name='',declarations=None):
+        DddComponent.classkey='ddd_component'
         self.name=name
         self.variablescope=0
         if declarations is not None:
@@ -152,7 +167,8 @@ class DddComponent(DataObject):
             self.declarations=[]
     def getJsonDict(self,hashed=False):
         tmp = DataObject.getJsonDict(self,hashed)
-        tmp.update({'data':{'name':self.name}})
+        tmp.update({'name':self.name,
+                    'declarations': self.declarations})
         return tmp
     def getChildren(self):
         return self.declarations
@@ -161,14 +177,15 @@ class DddComponent(DataObject):
             self.declarations.append(obj)
         else:
             raise Exception("Unsupported Child")
-    @classmethod
-    def getKey(cls):
-        return 'component'
     
 class DddVariableDef(DataObject):
     def __init__(self,name='',datatype=None,min=0,max=0,displayformat='',dimensions=None):
+        DddVariableDef.classkey='ddd_definition'
         self.name=name
-        self.datatype=datatype
+        if not datatype:
+            self.datatype=DddDatatype()
+        else:
+            self.datatype=datatype
         self.min=min
         self.max=max
         self.displayformat=displayformat
@@ -176,12 +193,13 @@ class DddVariableDef(DataObject):
         DataObject.__init__(self)
         
     def getJsonDict(self,hashed=False):
-        tmp = DataObject.getJsonDict(self,hashed)
-        tmp.update({'data':{'name':self.name,
+        tmp = DataObject.getJsonDict(self,False)
+        tmp.update({'name':self.name,
                             'min':self.min,
                             'max':self.max,
                             'displayformat':self.displayformat,
-                            'dimensions':self.dimensions}})#,'children':([self.getChildren()[0].hash] if hashed else [self.getChildren()[0].getJsonDict()])}})
+                            'dimensions':self.dimensions,
+                            'datatype':self.datatype})
         return tmp
     def getChildren(self):
         return [self.datatype]
@@ -191,20 +209,23 @@ class DddVariableDef(DataObject):
     @classmethod
     def getChildKeys(cls):
         return ['datatype']
-    @classmethod
-    def getKey(cls):
-        return 'definition'
 
 class DddVariableDecl(DataObject):
     def __init__(self,scope='local',definitionref=None,condition=None,**kwargs):
-        self.definition=definitionref
+        DddVariableDecl.classkey='ddd_declaration'
+        if not definitionref:
+            self.definition=DddVariableDef()
+        else:
+            self.definition=definitionref
         self.scope=scope
         self.condition=condition
         DataObject.__init__(self)
         
     def getJsonDict(self,hashed=False):
-        tmp = DataObject.getJsonDict(self,hashed)
-        tmp.update({'data':{'scope':self.scope,'condition':self.condition}})#,'children':([self.getChildren()[0].hash] if hashed else [self.getChildren()[0].getJsonDict()])}})
+        tmp = DataObject.getJsonDict(self,False)
+        tmp.update({'scope':self.scope,
+                    'condition':self.condition,
+                    'definition':self.definition})
         return tmp
     def getChildren(self):
         return [self.definition]
@@ -214,12 +235,10 @@ class DddVariableDecl(DataObject):
     @classmethod
     def getChildKeys(cls):
         return ['definition']
-    @classmethod
-    def getKey(cls):
-        return 'declaration'
 
 class DddCommit(DataObject):
     def __init__(self,message='',obj=None, user='',timestamp=None):
+        DddCommit.classkey='ddd_commit'
         self.message=message
         self.obj=obj
         self.user = user
@@ -227,17 +246,14 @@ class DddCommit(DataObject):
         DataObject.__init__(self)
     def getJsonDict(self, hashed=False):
         tmp = DataObject.getJsonDict(self, hashed)
-        tmp.update({'data':{'message':self.message,
-                            'user':self.user,
-                            'timestamp':self.timestamp}})
+        tmp.update({'message':self.message,
+                    'user':self.user,
+                    'timestamp':self.timestamp})
         return tmp
     def getChildren(self):
         return [self.obj]
     def appendChild(self, obj):
         if isinstance(obj,DataObject):
             self.obj = obj
-    @classmethod
-    def getKey(cls):
-        return 'commit'
-    
+            
     
