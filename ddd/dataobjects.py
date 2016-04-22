@@ -37,7 +37,10 @@ class DataObject(object):
             if type(value)==type([]):
                 tmplist=[]
                 for e in value:
-                    tmplist.append(e.dumpDict(hashed=hashed,rec=True))
+                    if isinstance(e, DataObject):
+                        tmplist.append(e.dumpDict(hashed=hashed,rec=True))
+                    else:
+                        tmplist.append(e)
                 d[key]=tmplist
             if isinstance(value, DataObject):
                 d[key]=value.dumpDict(hashed=hashed,rec=True)
@@ -146,7 +149,8 @@ class DddProject(DataObject):
             self.components = []
     def getJsonDict(self,hashed=False):
         tmp = DataObject.getJsonDict(self,hashed)
-        tmp.update({'name':self.name})
+        tmp.update({'name':self.name,
+                    'components':self.components})
         return tmp
     def getChildren(self):
         return self.components
@@ -195,11 +199,11 @@ class DddVariableDef(DataObject):
     def getJsonDict(self,hashed=False):
         tmp = DataObject.getJsonDict(self,False)
         tmp.update({'name':self.name,
-                            'min':self.min,
-                            'max':self.max,
-                            'displayformat':self.displayformat,
-                            'dimensions':self.dimensions,
-                            'datatype':self.datatype})
+                    'min':self.min,
+                    'max':self.max,
+                    'displayformat':self.displayformat,
+                    'dimensions':self.dimensions,
+                    'datatype':self.datatype})
         return tmp
     def getChildren(self):
         return [self.datatype]
@@ -212,11 +216,11 @@ class DddVariableDef(DataObject):
 
 class DddVariableDecl(DataObject):
     classkey='declaration'
-    def __init__(self,scope='local',definitionref=None,condition=None,**kwargs):
-        if not definitionref:
+    def __init__(self,scope='local',definition=None,condition=None):
+        if not definition:
             self.definition=DddVariableDef()
         else:
-            self.definition=definitionref
+            self.definition=definition
         self.scope=scope
         self.condition=condition
         DataObject.__init__(self)
@@ -248,7 +252,8 @@ class DddCommit(DataObject):
         tmp = DataObject.getJsonDict(self, hashed)
         tmp.update({'message':self.message,
                     'user':self.user,
-                    'timestamp':self.timestamp})
+                    'timestamp':self.timestamp,
+                    'obj':self.obj})
         return tmp
     def getChildren(self):
         return [self.obj]
