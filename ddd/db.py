@@ -29,7 +29,6 @@ class WorkingCopyDecoder:
         self.repo=repo
         self.factory=factory
     def __call__(self, data):
-        print "hooked "+str(data)
         if data.keys()[0]=='ddd_index':
             return self.index.get(data[data.keys()[0]])
         elif data.keys()[0]=='ddd_hash':
