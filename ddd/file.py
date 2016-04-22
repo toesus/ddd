@@ -9,9 +9,9 @@ class Handler:
     def __init__(self):
         self.validators = {}
                 
-    def load(self,filename):
+    def load(self,filename,object_hook=None):
         with codecs.open(filename,'r',encoding='utf-8') as fp:
-            data = json.load(fp,encoding='utf-8')
+            data = json.load(fp,encoding='utf-8',object_hook=object_hook)
         return data
     
     def dump(self,data,filename):

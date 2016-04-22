@@ -30,24 +30,24 @@ class WorkingCopyDecoder:
         self.factory=factory
     def __call__(self, data):
         print "hooked "+str(data)
-        return self.factory.create_by_name(data.pop('ddd_type'),**data)
+        if data.keys()[0]=='ddd_index':
+            return self.index.get(data[data.keys()[0]])
+        elif data.keys()[0]=='ddd_hash':
+            return self.repo.get(data[data.keys()[0]])
+        else:
+            return self.factory.create_by_name(data.pop('ddd_type'),**data)
 
 class DataObjectRepository:
-    def __init__(self,path,factory,filehandler):
+    def __init__(self,path,decoder,filehandler):
         self.path=path
         self.objects={}
         self.filehandler = filehandler
-        self.factory = factory
+        self.decoder = decoder
     def get(self,hash):
         if hash in self.objects:
             return self.objects[hash]
         else:
-            data = self.filehandler.load(os.path.join(self.path,hash))
-            objecttype = data.get('objecttype','')
-            obj = self.factory.create_by_name(objecttype,**data['data'])
-            for c in data.get('children',[]):
-                obj.appendChild(self.get(c))
-            
+            obj = self.filehandler.load(os.path.join(self.path,hash),object_hook=self.decoder)
             if obj.getHash()!= hash:
                 raise Exception('Corrupt File')
             self.objects[hash]=obj
@@ -141,11 +141,12 @@ class DB:
         self.factory.add_class(DddConversion)
         self.factory.add_class(DddProject)
         
-        self.repo=DataObjectRepository(os.path.join(repopath,'objects'),self.factory,Handler())
+        self.repo=DataObjectRepository(os.path.join(repopath,'objects'),None,Handler())
         
         self.index = ComponentIndex(os.path.join(repopath,'index'),self.repo)
         self.tags = VersionTag(os.path.join(repopath,'tags'),self.repo)
         self.decoder = WorkingCopyDecoder(self.repo,self.index, self.factory)
+        self.repo.decoder=self.decoder
           
     def add(self,filename):
         modulename = os.path.splitext(os.path.basename(filename))[0]
