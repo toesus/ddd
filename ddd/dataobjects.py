@@ -115,6 +115,28 @@ class DddConversion(DataObject):
         visitor.pre_order(self)
         pass
         visitor.post_order(self)
+        
+@dddobject('stringconversion')
+class DddStringConversion(DataObject):
+    def __init__(self,name='',table=None):
+        self.name=name
+        self.table={}
+        
+        for key in table:
+            self.table[int(key)]=table[key]    
+    
+    def getJsonDict(self, hashed=False):
+        tmp = DataObject.getJsonDict(self, False)
+        tmp.update({'table':self.table,
+                    'name':self.name})
+        return tmp
+    
+    def get_name(self):
+        return self.name
+    def accept(self,visitor):
+        visitor.pre_order(self)
+        pass
+        visitor.post_order(self)
 
 @dddobject('datatype')
 class DddDatatype(DataObject):

@@ -21,7 +21,11 @@ class DDDDecoder:
         elif data.keys()[0]=='ddd_hash':
             return self.repo.get(data[data.keys()[0]])
         else:
-            return self.factory.create_by_name(data.pop('ddd_type'),**data)
+            # Check if it is a normal dict or a ddd-object
+            if 'ddd_type' in data:
+                return self.factory.create_by_name(data.pop('ddd_type'),**data)
+            else:
+                return data
 
 class Handler:
     def __init__(self,repo,index,factory):

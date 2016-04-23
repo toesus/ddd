@@ -5,7 +5,7 @@ Created on 05.12.2015
 '''
 import unittest
 
-from ddd.dataobjects import DddConversion
+from ddd.dataobjects import DddConversion,DddStringConversion
 
 
 class TestDddConversion(unittest.TestCase):
@@ -73,6 +73,9 @@ class TestDddConversion(unittest.TestCase):
         self.assertEqual(d.factor.denominator, 1)
         self.assertEqual(d.get_name(),'DEC-4')
 
+    def testStringConversion(self):
+        d = DddStringConversion(name='conv',table={'0':'STRING1','1':'STRING2'})
+        self.assertEqual(d.table,{0:'STRING1',1:'STRING2'})
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
     unittest.main()
