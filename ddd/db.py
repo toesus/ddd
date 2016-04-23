@@ -47,6 +47,8 @@ class ComponentIndex:
         self.path = path
         self.index = {}
         self.repo=repo
+        for t in map(lambda x:os.path.split(x)[1],glob.glob(os.path.join(self.path,'*'))):
+            self.index[t]={}
     def get(self,name):
         o = self.index.get(name,None)
         if o is not None:
@@ -60,8 +62,11 @@ class ComponentIndex:
                 print name+ " does not exist in Index"
             return None
     def add(self,object):
-        self.index[object.name]=object
-        with open(os.path.join(self.path,object.name),'w') as fp:
+        if object.classkey not in self.index:
+            os.makedirs(os.path.join(self.path,object.classkey))
+            self.index[object.classkey]={}
+        self.index[object.classkey][object.name]=object
+        with open(os.path.join(self.path,object.classkey,object.name),'w') as fp:
             fp.write(object.getHash())
             
 class VersionTag(object):

@@ -1,5 +1,5 @@
 {
     "ddd_type":"project",
     "name":"projectxx",
-    "components":[{"ddd_index":"ModuleA"},{"ddd_index":"ModuleB"}]
+    "components":[{"ddd_index":"component/ModuleA"},{"ddd_index":"component/ModuleB"}]
 }
