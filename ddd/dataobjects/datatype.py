@@ -19,6 +19,16 @@ class DddDatatype(DataObject):
             self.conversion=conversion
         self.unit=unit
         self.constant=constant
+        typenames={'integer':{8:'int8',
+                              16:'int16',
+                              32:'int32'},
+                   'float':{ 32:'single',
+                              64:'double'}}
+        self.name=typenames[basetype][bitsize]
+        if signed:
+            self.name='s'+self.name
+        else:
+            self.name='u'+self.name
         
     def getJsonDict(self,hashed=False):
         tmp = DataObject.getJsonDict(self,False)
@@ -31,7 +41,13 @@ class DddDatatype(DataObject):
         return tmp
     
     def get_name(self):
-        return self.basetype.upper()+'_'+self.conversion.get_name()
+        return self.name.upper()+'_'+self.conversion.get_name()
+    
+    def source_name(self):
+        if self.constant:
+            return 'const '+self.name
+        else:
+            return self.name
     
     def accept(self,visitor):
         visitor.pre_order(self)

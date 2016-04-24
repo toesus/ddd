@@ -42,7 +42,7 @@
                 "ddd_type":"definition",
                 "name":"submoduleinput",
                 "datatype":{"ddd_type":"datatype",
-                        "basetype":"sint16",
+                        "basetype":"integer",
                             "unit":"°C",
                             "conversion":{"ddd_type":"binary","fraction":3}
                 },
@@ -58,7 +58,7 @@
                 "ddd_type":"definition",
                 "name":"stringvariable",
                 "datatype":{"ddd_type":"datatype",
-                        "basetype":"uint8",
+                        "basetype":"integer",
                             "unit":"-",
                             "conversion":{"ddd_type":"stringconversion","table":{"1":"string_1","2":"string_2"}}
                 },
