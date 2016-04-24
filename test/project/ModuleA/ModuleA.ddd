@@ -11,7 +11,7 @@
                     "ddd_type":"datatype",
                     "basetype":"sint16","constant":true,
                     "conversion":{
-                        "ddd_type":"conversion","type":"linear","numerator":4,"denominator":10,"offset":10}}
+                        "ddd_type":"linear","numerator":4,"denominator":10,"offset":10}}
                 },
             "scope": "output",
             "condition":"Mydefine_D==1"
@@ -24,7 +24,7 @@
                 "datatype":{"ddd_type":"datatype",
                         "basetype":"sint16",
                             "unit":"°C",
-                            "conversion":{"ddd_type":"conversion","type":"binary","fraction":3}
+                            "conversion":{"ddd_type":"binary","fraction":3}
                 },
                 "min":34,
                 "max":234,

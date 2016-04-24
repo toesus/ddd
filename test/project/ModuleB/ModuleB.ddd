@@ -7,7 +7,7 @@
             "definition":{
             "ddd_type":"definition",
                 "name":"Variable2",
-                "datatype":{"ddd_type":"datatype","basetype":"sint16","constant":true,"conversion":{"ddd_type":"conversion","type":"linear","numerator":4,"denominator":10,"offset":10}}
+                "datatype":{"ddd_type":"datatype","basetype":"sint16","constant":true,"conversion":{"ddd_type":"linear","numerator":4,"denominator":10,"offset":10}}
                 },
             "scope": "input",
             "condition":"SomeOtherDefine_D<103"
@@ -18,7 +18,7 @@
             "definition":{
             "ddd_type":"definition",
                 "name":"submoduleoutput",
-                "datatype":{"ddd_type":"datatype","basetype":"sint16","conversion":{"ddd_type":"conversion","type":"1to1"}},
+                "datatype":{"ddd_type":"datatype","basetype":"sint16","conversion":{"ddd_type":"1to1"}},
                                 "dimensions":[12]
                 },
             "scope": "output"

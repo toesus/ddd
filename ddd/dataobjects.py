@@ -58,45 +58,83 @@ class DataObject(object):
         newh=hashlib.sha1(tmpstring.encode('utf-8')).hexdigest()
         return newh
 
-@dddobject('conversion')
+@dddobject('1to1')
 class DddConversion(DataObject):
-    def __init__(self,type=None,fraction=0,numerator=None,denominator=None,offset=0):
+    def __init__(self):
+        self.name='1TO1'
+    def get_name(self):
+        return self.name
+    def accept(self,visitor):
+        visitor.pre_order(self)
+        pass
+        visitor.post_order(self)
+        
+@dddobject('binary')
+class DddConversionBin(DddConversion):
+    def __init__(self,fraction=0,offset=0):
+        self.factor=fractions.Fraction(1)
+        self.fraction=fraction
+        self.offset=offset
+        
+        self.name='BIN'+str(fraction)
+        if fraction>0:
+            self.factor=fractions.Fraction(1,2**fraction)
+        else:
+            self.factor=fractions.Fraction(2**(-fraction),1)
+            
+        if self.offset!=0:
+            self.name=self.name+'_OFFS'+str(self.offset)
+    
+    def getJsonDict(self, hashed=False):
+        tmp = DataObject.getJsonDict(self, False)
+        tmp.update({'fraction':self.fraction,
+                    'offset':self.offset})
+        return tmp
+
+@dddobject('decimal')
+class DddConversionDec(DddConversion):
+    def __init__(self,fraction=0,offset=0):
+        self.factor=fractions.Fraction(1)
+        self.fraction=fraction
+        self.offset=offset
+        self.name='DEC'+str(fraction)
+        
+        if fraction>0:
+            self.factor=fractions.Fraction(1,10**fraction)
+        else:
+            self.factor=fractions.Fraction(10**(-fraction),1)
+            
+        if self.offset!=0:
+            self.name=self.name+'_OFFS'+str(self.offset)
+    
+    def getJsonDict(self, hashed=False):
+        tmp = DataObject.getJsonDict(self, False)
+        tmp.update({'fraction':self.fraction,
+                    'offset':self.offset})
+        return tmp
+        
+@dddobject('linear')
+class DddConversionLin(DddConversion):
+    def __init__(self,numerator=0,denominator=0,offset=0):
+        self.numerator=numerator
+        self.denominator=denominator
         self.factor=fractions.Fraction(1)
         self.offset=offset
-        self.type=type
-        self.name='none'
         
-        
-        if type=='binary':
-            if fraction>0:
-                self.factor=fractions.Fraction(1,2**fraction)
-            else:
-                self.factor=fractions.Fraction(2**(-fraction),1)
-        elif type=='decimal':
-            if fraction>0:
-                self.factor=fractions.Fraction(1,10**fraction)
-            else:
-                self.factor=fractions.Fraction(10**(-fraction),1)
-        elif type=='linear' or type is None:
-            try:
-                self.factor=fractions.Fraction(numerator,denominator)
-            except TypeError:
-                raise Exception("Only Rational Number factors are supported")
+        try:
+            self.factor=fractions.Fraction(numerator,denominator)
+        except TypeError:
+            raise Exception("Only Rational Number factors are supported")
         (m,e)=math.frexp(self.factor)
         if m==0.5:
-            self.type='binary'
-            self.name='BIN'+str((e-1)*-1)
+            raise Exception('Linear conversion with power of 2 factor created, switch to a BIN-covnersion')
         else:
             e=math.log10(self.factor)
             if int(e)==e:
-                self.type='decimal'
-                self.name='DEC'+str(int(e)*-1)
-            else:
-                self.type='linear'
-                self.name='LIN'+str(float(self.factor))
-        if self.factor==1:
-            self.type='1to1'
-            self.name='1TO1'
+                raise Exception('Linear conversion with power of 10 factor created, switch to a DEC-conversion')
+        
+        self.name='LIN'+str(float(self.factor))
+        
         if self.offset!=0:
             self.name=self.name+'_OFFS'+str(self.offset)
                 
@@ -104,17 +142,10 @@ class DddConversion(DataObject):
     
     def getJsonDict(self, hashed=False):
         tmp = DataObject.getJsonDict(self, False)
-        tmp.update({'numerator':self.factor.numerator,
-                    'denominator':self.factor.denominator,
+        tmp.update({'numerator':self.numerator,
+                    'denominator':self.denominator,
                     'offset':self.offset})
         return tmp
-    
-    def get_name(self):
-        return self.name
-    def accept(self,visitor):
-        visitor.pre_order(self)
-        pass
-        visitor.post_order(self)
         
 @dddobject('stringconversion')
 class DddStringConversion(DataObject):
@@ -123,7 +154,7 @@ class DddStringConversion(DataObject):
         self.table={}
         
         for key in table:
-            self.table[int(key)]=table[key]    
+            self.table[int(key)]=table[key]
     
     def getJsonDict(self, hashed=False):
         tmp = DataObject.getJsonDict(self, False)
