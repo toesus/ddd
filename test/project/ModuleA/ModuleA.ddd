@@ -9,11 +9,31 @@
                 "name":"Variable2",
                 "datatype":{
                     "ddd_type":"datatype",
-                    "basetype":"sint16","constant":true,
+                    "basetype":"integer",
+			"signed":true,
+		"bitsize":16,
+		"constant":true,
                     "conversion":{
                         "ddd_type":"linear","numerator":4,"denominator":10,"offset":10}}
                 },
             "scope": "output",
+            "condition":"Mydefine_D==1"
+            },
+            {
+            "ddd_type":"declaration",
+            "definition":{
+                "ddd_type":"definition",
+                "name":"Variable3",
+                "datatype":{
+                    "ddd_type":"datatype",
+                    "basetype":"integer",
+			"signed":true,
+		"bitsize":8,
+		"constant":true,
+                    "conversion":{
+                        "ddd_type":"linear","numerator":4,"denominator":10,"offset":10}}
+                },
+            "scope": "local",
             "condition":"Mydefine_D==1"
             },
             {

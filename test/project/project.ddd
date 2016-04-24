@@ -1,5 +1,17 @@
 {
     "ddd_type":"project",
     "name":"projectxx",
-    "components":[{"ddd_index":"component/ModuleA"},{"ddd_index":"component/ModuleB"}]
+    "components":[{"ddd_index":"component/ModuleA"},{"ddd_index":"component/ModuleB"}],
+    "memorysections":[{"ddd_type":"memorysection",
+                       "name":"1 byte constants",
+			"conditions":{"constant":true, "bitsize":8}},
+			{"ddd_type":"memorysection",
+                       "name":"other constants",
+			"conditions":{"constant":true}},
+			{"ddd_type":"memorysection",
+                       "name":"defaultsection",
+			"conditions":{}}
+		]
+
+
 }

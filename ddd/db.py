@@ -210,15 +210,30 @@ class DB:
         
         v = SourceVisitor()
         tmp.accept(v)
-        out = {'groups':[{'groupname':'default','definitions':[]},
-                         {'groupname':'calibrations','definitions':[]}]}
+        
+        out = {'groups':[]}
+        sectionindex={}
+        idx=0
+        for section in tmp.memorysections:
+            out['groups'].append({'groupname':section.name,'definitions':[]})
+            sectionindex[section.name]=idx
+            idx+=1
         
         for name,var in v.found_variables.items():
-            if var['definition'].datatype.constant:
-                out['groups'][1]['definitions'].append(var)
-            else:
-                out['groups'][0]['definitions'].append(var)
-        out['groups'][0]['definitions'].sort(key=lambda x: x['definition'].name)
+            for section in tmp.memorysections:
+                match=True
+                for key,value in section.conditions.items():
+                    if var['definition'].datatype.__dict__[key]!=value:
+                        match=False
+                        break
+                if match:
+                    print var['definition'].name+' matched into '+section.name
+                    out['groups'][sectionindex[section.name]]['definitions'].append(var)
+                    break
+            if not match:
+                raise Exception('Variable '+var['definition'].name+' could not be assigned to any memory-section')
+        for group in out['groups']:
+            group['definitions'].sort(key=lambda x: x['definition'].name)
             
         with open(filename,'wb') as fp:
             fp.write(r.render_name('def.c',out))
