@@ -16,16 +16,17 @@ class DDDDecoder:
         self.repo=repo
         self.factory=factory
     def __call__(self, data):
-        if data.keys()[0]=='ddd_index':
-            return self.index.get(data[data.keys()[0]])
-        elif data.keys()[0]=='ddd_hash':
-            return self.repo.get(data[data.keys()[0]])
-        else:
-            # Check if it is a normal dict or a ddd-object
-            if 'ddd_type' in data:
-                return self.factory.create_by_name(data.pop('ddd_type'),**data)
+        if 'ddd_type' in data:
+            return self.factory.create_by_name(data.pop('ddd_type'),**data)
+        elif len(data.keys())==1:
+            if data.keys()[0]=='ddd_index':
+                return self.index.get(data[data.keys()[0]])
+            elif data.keys()[0]=='ddd_hash':
+                return self.repo.get(data[data.keys()[0]])
             else:
                 return data
+        else:
+            return data
 
 class Handler:
     def __init__(self,repo,index,factory):
