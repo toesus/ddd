@@ -1,17 +1,34 @@
 {
-    "ddd_type":"project",
-    "name":"projectxx",
-    "components":[{"ddd_index":"component/ModuleA"},{"ddd_index":"component/ModuleB"}],
-    "memorysections":[{"ddd_type":"memorysection",
-                       "name":"1 byte constants",
-			"conditions":{"constant":true, "bitsize":8}},
-			{"ddd_type":"memorysection",
-                       "name":"other constants",
-			"conditions":{"constant":true}},
-			{"ddd_type":"memorysection",
-                       "name":"defaultsection",
-			"conditions":{}}
-		]
-
-
+    "components": [
+        {
+            "ddd_index": "component/ModuleA"
+        }, 
+        {
+            "ddd_index": "component/ModuleB"
+        }
+    ], 
+    "ddd_type": "project", 
+    "memorysections": [
+        {
+            "conditions": {
+                "bitsize": 8, 
+                "constant": true
+            }, 
+            "ddd_type": "memorysection", 
+            "name": "1 byte constants"
+        }, 
+        {
+            "conditions": {
+                "constant": true
+            }, 
+            "ddd_type": "memorysection", 
+            "name": "other constants"
+        }, 
+        {
+            "conditions": {}, 
+            "ddd_type": "memorysection", 
+            "name": "defaultsection"
+        }
+    ], 
+    "name": "projectxx"
 }
