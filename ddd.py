@@ -43,11 +43,9 @@ def main():
     
     # Process arguments
     args = parser.parse_args()
-    print str(args)
     
     paths = args.paths
     
-    print "Open repo "+paths[0]
     db = DB(paths[0])
     
     status = 0

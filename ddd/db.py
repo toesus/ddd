@@ -63,7 +63,14 @@ class ComponentIndex:
             return None
     def add(self,object):
         if object.classkey not in self.index:
-            os.makedirs(os.path.join(self.path,object.classkey))
+            try:
+                os.makedirs(os.path.join(self.path,object.classkey))  
+            except OSError as e:
+                # if the dict has been created by another instance of ddd
+                # we can ignore the error and go on "OSError: [Errno 17] File exists"
+                # otherwise re-raise the error
+                if e.errno != 17:
+                    raise
             self.index[object.classkey]={}
         self.index[object.classkey][object.name]=object
         with open(os.path.join(self.path,object.classkey,object.name),'w') as fp:
