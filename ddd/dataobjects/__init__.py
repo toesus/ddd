@@ -7,3 +7,4 @@ from datatype import *
 from project import *
 from variabledeclaration import *
 from variabledefinition import *
+from memorysection import *
