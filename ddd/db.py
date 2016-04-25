@@ -194,7 +194,9 @@ class DB:
         v = SourceVisitor()
         data.accept(v)
         
-        out = {'groups':[]}
+        out = {'name':data.filename,
+               'hash':data.getHash(),
+               'groups':[]}
         sectionindex={}
         idx=0
         for section in config.memorysections:

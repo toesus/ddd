@@ -42,6 +42,7 @@ class Handler:
     def load(self,filename):
         with codecs.open(filename,'r',encoding='utf-8') as fp:
             data = json.load(fp,encoding='utf-8',object_hook=self.decoder)
+        data.filename=filename
         return data
     
     def dump(self,data,filename,recursive=True):
