@@ -3,10 +3,16 @@ import jsonschema
 import codecs
 from dataobjects import DataObject
 
-class DDDEncoder(json.JSONEncoder):
+class DDDEncoderHashed(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, DataObject):
             return obj.dumpDict(True)
+        else:
+            return json.JSONEncoder.default(self, obj)
+class DDDEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, DataObject):
+            return obj.dumpDict(False)
         else:
             return json.JSONEncoder.default(self, obj)
         

@@ -76,3 +76,20 @@ Supported functions:
 
 
 ## Command Line Interface
+### Data Declaration Export
+The variable declaration header file can be exported directly based on only the component description .ddd file.
+
+`ddd export ModuleA.ddd -c config.ddd -o ModuleA_decl.h --template decl.h`
+
+### Project creation and check
+
+`ddd check ModuleA.ddd ModuleB.ddd -o project.ddd`
+
+### Data Definition Export
+The variable definition file requires all the module description files as input:
+
+`ddd export project.ddd -c config.ddd -o project_def.c --template def.c`
+
+### 
+### Commit
+This commits the 

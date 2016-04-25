@@ -60,8 +60,8 @@ class CheckVisitor:
         self.variable_versions = defaultdict(lambda : defaultdict(lambda: []))
     def pre_order(self,obj):
         if isinstance(obj, DddComponent):
-            self.component_stack.append(obj.getHash())
-            self.found_components.append(obj.getHash())
+            self.component_stack.append(obj)
+            self.found_components.append(obj)
             self.found_variables[self.component_stack[-1]]=defaultdict(lambda :dict({'input':[],'output':[],'local':[]}))
 #             for v in obj.variablelist:
 #                 self.found_variables[self.component_stack[-1]][v.name][v.scope].append(self.component_stack[-1])

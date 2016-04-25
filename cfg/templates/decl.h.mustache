@@ -7,9 +7,21 @@
 #error Data declarations are not compatible with component sources!
 #endif
 
-/*@#declarations@*/
-/*@#condition@*/#if /*@condition@*/
-extern /*@definition.datatype.source_name@*/ /*@definition.name@*/;
-#endif/*@/condition@*//*@^condition@*/extern /*@definition.datatype.basetype@*/ /*@definition.name@*/;/*@/condition@*/
-/*@/declarations@*/
-
+/*@#groups@*/
+/* Start Group /*@groupname@*/ */
+/*@#definitions@*/
+/*@#output@*/#if /*@.@*/
+/*@/output@*/
+extern /*@ definition.datatype.source_name @*/ /*@ definition.name @*//*@#definition.dimensions@*/[/*@.@*/]/*@/definition.dimensions@*/;
+/*@#output@*/
+#else
+/*@#input@*/
+#if (/*@.@*/)
+#error Input condition activated while output condition deactivated!
+#endif
+/*@/input@*/
+#endif
+/*@/output@*/
+/*@/definitions@*/
+/* End Group /*@groupname@*/ */
+/*@/groups@*/

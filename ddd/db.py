@@ -122,28 +122,33 @@ class DB:
         tmp=self.handler.load(filename)
         self.repo.store(tmp)
         self.index.add(tmp)
+    def open(self,filename):
+        tmp=self.handler.load(filename)
+        return tmp
+    def dump(self,object,filename):
+        self.handler.dump(object, filename)
     
-    def check(self,hash):
+    def check(self,project):
         print "Checking current Project"
         e = 0   
         visitor=visitors.CheckVisitor()
-        self.repo.get(hash).accept(visitor)
+        project.accept(visitor)
         
         for vname,usage in visitor.variable_versions.items():
             if len(usage.keys())>1:
                 print "Inconsistent Versions used for: "+vname
                 for v in usage:
-                    print " - Version: "+v+' in '+', '.join(map(lambda x:self.repo.get(x).name,usage[v]))
+                    print " - Version: "+v+' in '+', '.join(map(lambda x:x.name,usage[v]))
                 e+=1
         for comp in visitor.found_components:
             for vname,value in visitor.found_variables[comp].iteritems():
                 if len(value.get('output',[]))>1:
-                    print "Multiple Outputs for: "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:self.repo.get(x).name,value['output']))
+                    print "Multiple Outputs for: "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:x.name,value['output']))
                     e+=1
                 if len(value.get('input',[]))>0:
                     if len(value.get('output',[]))==0:
                         e+=1
-                        print "Input with no Output for "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:self.repo.get(x).name,value['input']))
+                        print "Input with no Output for "+vname+" in Components:\n - "+"\n - ".join(map(lambda x:x.name,value['input']))
         if e>0:
             print "Project is not consistent, "+str(e)+" errors found"
         else:
@@ -172,62 +177,46 @@ class DB:
         with codecs.open('viewer.html','w',encoding='utf-8') as fp:
             fp.write(r.render_name('viewer.html',visitor.data))
     
-    def commit_and_tag(self,name,tag,message):
+    def commit_and_tag(self,object,tag,message):
         print "Creating Commit"
-        c=DddCommit(message=message,obj=self.index.get(name),user=getpass.getuser(),timestamp=datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
+        c=DddCommit(message=message,obj=object,user=getpass.getuser(),timestamp=datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
         print "Commit hash: "+c.getHash()
         self.repo.store(c)
         print c.user
         print "Adding Tag"
         self.tags.create(tag,c)
     
-    def export_decl(self,hash=None,name=None,filename=None):
+    def export_decl(self,data=None,config=None,filename=None):
         
-        tmp = None
-        if hash is None:
-            if name is None:
-                raise Exception('Name or hash required')
-            else:
-                tmp = self.index.get(name)
-        else:
-            tmp = self.repo.get(hash)
         r = pystache.Renderer(search_dirs=os.path.join(self.configpath,'templates'),escape=lambda x:x)
         with open(filename,'wb') as fp:
-            fp.write(r.render_name('decl.h',tmp))      
+            fp.write(r.render_name('decl.h',data))      
 
 
-    def export_def(self,hash=None,name=None,filename=None):
+    def export_source(self,data=None,config=None,filename=None,template=''):
         
-        tmp = None
-        if hash is None:
-            if name is None:
-                raise Exception('Name or hash required')
-            else:
-                tmp = self.index.get(name)
-        else:
-            tmp = self.repo.get(hash)
         r = pystache.Renderer(search_dirs=os.path.join(self.configpath,'templates'),escape=lambda x:x)
         
         v = SourceVisitor()
-        tmp.accept(v)
+        data.accept(v)
         
         out = {'groups':[]}
         sectionindex={}
         idx=0
-        for section in tmp.memorysections:
+        for section in config.memorysections:
             out['groups'].append({'groupname':section.name,'definitions':[]})
             sectionindex[section.name]=idx
             idx+=1
         
         for name,var in v.found_variables.items():
-            for section in tmp.memorysections:
+            for section in config.memorysections:
                 match=True
                 for key,value in section.conditions.items():
                     if var['definition'].datatype.__dict__[key]!=value:
                         match=False
                         break
                 if match:
-                    print var['definition'].name+' matched into '+section.name
+                    #print var['definition'].name+' matched into '+section.name
                     out['groups'][sectionindex[section.name]]['definitions'].append(var)
                     break
             if not match:
@@ -236,7 +225,7 @@ class DB:
             group['definitions'].sort(key=lambda x: x['definition'].name)
             
         with open(filename,'wb') as fp:
-            fp.write(r.render_name('def.c',out))
+            fp.write(r.render_name(template,out))
         
     def export_conditions(self,hash=None,name=None,filename=None):
         tmp = None
@@ -259,9 +248,6 @@ class DB:
         with open(filename,'wb') as fp:
             fp.write(r.render_name('conditions.json',{'conditions':data}))
     
-    def export(self,template='',**kwargs):
-        exportfunctions = {'def.c':self.export_def,'decl.h':self.export_decl,'conditions.json':self.export_conditions}
-        exportfunctions.get(template)(**kwargs)
         
     def init(self,path='repo'):
         print "Initializing repoisitory structure in "+path+" ..."
