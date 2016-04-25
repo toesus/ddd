@@ -6,18 +6,17 @@ Created on 24.04.2016
 
 from objects import dddobject,DataObject
 
-
-@dddobject('memorysection')
-class DddMemorySection(DataObject):
-    def __init__(self,name='',conditions=None):
-        self.name=name
-        self.conditions=conditions
+@dddobject('config')
+class DddConfig(DataObject):
+    def __init__(self,memorysections=None):
+        self.memorysections=memorysections
     def getJsonDict(self,hashed=False):
         tmp = DataObject.getJsonDict(self,hashed)
-        tmp.update({'name':self.name,
-                    'conditions':self.conditions})
+        tmp.update({'memorysections':self.memorysections})
         return tmp
+    
     def accept(self,visitor):
         visitor.pre_order(self)
-        pass
+        for m in self.memorysections:
+            m.accept(visitor)
         visitor.post_order(self)
