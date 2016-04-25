@@ -185,14 +185,8 @@ class DB:
         print c.user
         print "Adding Tag"
         self.tags.create(tag,c)
-    
-    def export_decl(self,data=None,config=None,filename=None):
         
-        r = pystache.Renderer(search_dirs=os.path.join(self.configpath,'templates'),escape=lambda x:x)
-        with open(filename,'wb') as fp:
-            fp.write(r.render_name('decl.h',data))      
-
-
+        
     def export_source(self,data=None,config=None,filename=None,template=''):
         
         r = pystache.Renderer(search_dirs=os.path.join(self.configpath,'templates'),escape=lambda x:x)
