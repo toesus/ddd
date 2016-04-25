@@ -38,7 +38,7 @@ class DataObjectRepository:
         def storage(object):
             h=object.getHash()
             if h not in self.objects:
-                self.filehandler.dump(object,os.path.join(self.path,h),recursive=False)
+                self.filehandler.dump(object,os.path.join(self.path,h),hashed=True)
                 self.objects[h]=object
         object.accept(PostVisitor(storage))
 

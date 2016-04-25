@@ -3,19 +3,15 @@ import jsonschema
 import codecs
 from dataobjects import DataObject
 
-class DDDEncoderHashed(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, DataObject):
-            return obj.dumpDict(True)
-        else:
-            return json.JSONEncoder.default(self, obj)
-class DDDEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, DataObject):
-            return obj.dumpDict(False)
-        else:
-            return json.JSONEncoder.default(self, obj)
-        
+def encoder(hashed):
+    class DDDEncoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, DataObject):
+                return obj.dumpDict(hashed)
+            else:
+                return json.JSONEncoder.default(self, obj)
+    return DDDEncoder
+
 class DDDDecoder:
     def __init__(self,repo,index,factory):
         self.index=index
@@ -45,11 +41,7 @@ class Handler:
         data.filename=filename
         return data
     
-    def dump(self,data,filename,recursive=True):
-        if recursive:
-            enc = DDDEncoder
-        else:
-            enc = DDDEncoderHashed
+    def dump(self,data,filename,hashed=False):
         with codecs.open(filename,'w',encoding='utf-8') as fp:
-            json.dump(data,fp,indent=4,sort_keys=True,ensure_ascii=False,cls=enc)
+            json.dump(data,fp,indent=4,sort_keys=True,ensure_ascii=False,cls=encoder(hashed))
             
