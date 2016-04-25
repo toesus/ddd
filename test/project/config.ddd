@@ -1,13 +1,5 @@
 {
-    "components": [
-        {
-            "ddd_index": "component/ModuleA"
-        }, 
-        {
-            "ddd_index": "component/ModuleB"
-        }
-    ], 
-    "ddd_type": "project", 
+    "ddd_type": "config", 
     "memorysections": [
         {
             "conditions": {
@@ -29,6 +21,5 @@
             "ddd_type": "memorysection", 
             "name": "defaultsection"
         }
-    ], 
-    "name": "projectxx"
+    ]
 }

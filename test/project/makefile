@@ -15,47 +15,33 @@ repo:
 source:
 	mkdir $(SOURCE)
 
-$(INDEX)/component/ModuleA: ModuleA/ModuleA.ddd repo
-	python $(DDD) add ModuleA/ModuleA.ddd $(REPO)
-$(INDEX)/component/ModuleB: ModuleB/ModuleB.ddd repo
-	python $(DDD) add ModuleB/ModuleB.ddd $(REPO)
-$(INDEX)/project/projectxx: project.ddd $(INDEX)/component/ModuleB $(INDEX)/component/ModuleA repo
-	python $(DDD) add project.ddd $(REPO)
+$(REPO)/project.ddd:ModuleA/ModuleA.ddd ModuleB/ModuleB.ddd config.ddd $(REPO)
+	python $(DDD) check ModuleA/ModuleA.ddd ModuleB/ModuleB.ddd --config config.ddd --output $(REPO)/project.ddd $(REPO)
 
-$(SOURCE)/ModuleA_decl.h:$(INDEX)/component/ModuleA project_check source
-	python $(DDD) export component/ModuleA --template decl.h --output $(SOURCE)/ModuleA_decl.h repo
-$(SOURCE)/ModuleB_decl.h:$(INDEX)/component/ModuleB project_check source
-	python $(DDD) export component/ModuleB --template decl.h --output $(SOURCE)/ModuleB_decl.h repo
-$(SOURCE)/projectxx_def.c:$(INDEX)/project/projectxx project_check source
-	python $(DDD) export project/projectxx --template def.c --output $(SOURCE)/projectxx_def.c repo
+$(SOURCE)/ModuleA_decl.h:ModuleA/ModuleA.ddd config.ddd source
+	python $(DDD) export ModuleA/ModuleA.ddd --config config.ddd --template decl.h --output $(SOURCE)/ModuleA_decl.h repo
+$(SOURCE)/ModuleB_decl.h:ModuleB/ModuleB.ddd config.ddd source
+	python $(DDD) export ModuleB/ModuleB.ddd --config config.ddd --template decl.h --output $(SOURCE)/ModuleB_decl.h repo
+$(SOURCE)/project_def.c: $(REPO)/project.ddd source
+	python $(DDD) export $(REPO)/project.ddd --config config.ddd --template def.c --output $(SOURCE)/project_def.c repo
 
 $(SOURCE)/conditions.dummy: $(INDEX)/projectxx
 	python $(DDD) export project/projectxx --template conditions.json --output $(SOURCE)/conditions.dummy repo
 $(SOURCE)/conditions.json: $(SOURCE)/conditions.dummy
 	dcc $(SOURCE)/conditions.dummy -P -o $(SOURCE)/conditions.json
 
-export_sources:$(SOURCE)/ModuleA_decl.h $(SOURCE)/ModuleB_decl.h $(SOURCE)/projectxx_def.c
-	echo hallo
-
-project_check: $(INDEX)/project/projectxx
-	python $(DDD) check project/projectxx $(REPO)
-	touch project_check
-
-build.txt: $(INDEX)/project/projectxx
+build.txt: $(REPO)/project.ddd
 	if ! test -f build.txt; then echo 0 > build.txt; fi
 	echo $$(($$(cat build.txt) + 1)) > build.txt
 
-commit: project_check build.txt
-	python $(DDD) commit project/projectxx --message "autocommit" --tag $$(cat build.txt) $(REPO)
+commit:$(SOURCE)/ModuleA_decl.h $(SOURCE)/ModuleB_decl.h $(SOURCE)/project_def.c build.txt
+	python $(DDD) commit $(REPO)/project.ddd --message "autocommit" --tag $$(cat build.txt) $(REPO)
 
 view:
 	python $(DDD) view $(REPO)
 	$(EXPLORER_CMD) viewer.html
-    
-view_project: $(INDEX)/project/projectxx
-	python $(DDD) view projectxx $(REPO)
-	$(EXPLORER_CMD) viewer.html
 
 clean:
 	rm -rf $(REPO)
+	rm -rf $(SOURCE)
 	rm build.txt
