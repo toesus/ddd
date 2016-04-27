@@ -19,19 +19,23 @@ class DddConversion(DataObject):
         visitor.pre_order(self)
         pass
         visitor.post_order(self)
-        
-@dddobject('binary')
-class DddConversionBin(DddConversion):
+
+
+class DddConversionPow(DddConversion):
+    base=0
+    basename=''
     def __init__(self,fraction=0,offset=0):
+        if not self.base:
+            raise NotImplementedError('DddConversionPow should not be used directly')
         self.factor=fractions.Fraction(1)
         self.fraction=fraction
         self.offset=offset
         
-        self.name='BIN'+str(fraction)
+        self.name=self.basename+str(fraction)
         if fraction>0:
-            self.factor=fractions.Fraction(1,2**fraction)
+            self.factor=fractions.Fraction(1,self.base**fraction)
         else:
-            self.factor=fractions.Fraction(2**(-fraction),1)
+            self.factor=fractions.Fraction(self.base**(-fraction),1)
             
         if self.offset!=0:
             self.name=self.name+'_OFFS'+str(self.offset)
@@ -40,30 +44,17 @@ class DddConversionBin(DddConversion):
         tmp = DataObject.getJsonDict(self, False)
         tmp.update({'fraction':self.fraction,
                     'offset':self.offset})
-        return tmp
+        return tmp        
+@dddobject('binary')
+class DddConversionBin(DddConversionPow):
+    base=2
+    basename='BIN'
 
 @dddobject('decimal')
-class DddConversionDec(DddConversion):
-    def __init__(self,fraction=0,offset=0):
-        self.factor=fractions.Fraction(1)
-        self.fraction=fraction
-        self.offset=offset
-        self.name='DEC'+str(fraction)
-        
-        if fraction>0:
-            self.factor=fractions.Fraction(1,10**fraction)
-        else:
-            self.factor=fractions.Fraction(10**(-fraction),1)
-            
-        if self.offset!=0:
-            self.name=self.name+'_OFFS'+str(self.offset)
-    
-    def getJsonDict(self, hashed=False):
-        tmp = DataObject.getJsonDict(self, False)
-        tmp.update({'fraction':self.fraction,
-                    'offset':self.offset})
-        return tmp
-        
+class DddConversionDec(DddConversionPow):
+    base=10
+    basename='DEC'
+
 @dddobject('linear')
 class DddConversionLin(DddConversion):
     def __init__(self,numerator=0,denominator=0,offset=0):
