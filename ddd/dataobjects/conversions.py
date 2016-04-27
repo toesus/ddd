@@ -90,13 +90,13 @@ class DddConversionLin(DddConversion):
         return tmp
         
 @dddobject('stringconversion')
-class DddStringConversion(DataObject):
+class DddConversionString(DataObject):
     def __init__(self,name='',table=None):
         self.name=name
-        self.table={}
-        
-        for key in table:
-            self.table[int(key)]=table[key]
+        if not table:
+            self.table=list()
+        else:
+            self.table = table
     
     def getJsonDict(self, hashed=False):
         tmp = DataObject.getJsonDict(self, False)
