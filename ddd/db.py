@@ -234,7 +234,7 @@ class DB:
         data[-1]['last']=True
         
         with open(filename,'wb') as fp:
-            fp.write(r.render_name('conditions.json',{'conditions':data}))
+            fp.write(r.render_name('conditions.json',{'conditions':data,'conditionheader':obj.config.conditionheader}))
     
         
     def init(self,path='repo'):

@@ -1,5 +1,6 @@
 {
-    "ddd_type": "config", 
+    "ddd_type": "config",
+    "conditionheader":"constants.h",
     "memorysections": [
         {
             "conditions": {
