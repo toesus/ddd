@@ -128,10 +128,10 @@ class DB:
     def dump(self,object,filename):
         self.handler.dump(object, filename)
     
-    def check(self,project):
+    def check(self,project,conditions):
         print "Checking current Project"
         e = 0   
-        visitor=visitors.CheckVisitor()
+        visitor=visitors.CheckVisitor(conditions=conditions)
         project.accept(visitor)
         
         for vname,usage in visitor.variable_versions.items():
@@ -223,20 +223,12 @@ class DB:
         with open(filename,'wb') as fp:
             fp.write(r.render_name(template,out))
         
-    def export_conditions(self,hash=None,name=None,filename=None):
-        tmp = None
-        if hash is None:
-            if name is None:
-                raise Exception('Name or hash required')
-            else:
-                tmp = self.index.get(name)
-        else:
-            tmp = self.repo.get(hash)
+    def export_conditions(self,obj,filename=None):
         
         r = pystache.Renderer(search_dirs=os.path.join(self.configpath,'templates'),escape=lambda x:x)
         
         v = ConditionVisitor()
-        tmp.accept(v)
+        obj.accept(v)
         
         data = map(lambda x: {"condition":x,"last":False},v.conditions.keys())
         data[-1]['last']=True

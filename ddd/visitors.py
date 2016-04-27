@@ -29,11 +29,13 @@ class SourceVisitor:
     def pre_order(self,obj):
         if isinstance(obj, DddVariableDecl):
             self.found_variables[obj.definition.name]['definition']=obj.definition
-            if obj.scope=='output':
-                self.found_variables[obj.definition.name]['output']=obj.condition
-            else:
-                if obj.condition:
-                    self.found_variables[obj.definition.name]['input'].append(obj.condition)
+            if obj.condition:
+                self.found_variables[obj.definition.name]['decl_condition']=obj.condition
+                if obj.scope=='output':
+                    self.found_variables[obj.definition.name]['output']=obj.condition
+                else:
+                    if obj.condition:
+                        self.found_variables[obj.definition.name]['input'].append(obj.condition)
     def in_order(self,obj):
         pass
     def post_order(self,obj):
@@ -53,11 +55,12 @@ class ConditionVisitor:
         pass
     
 class CheckVisitor:
-    def __init__(self):
+    def __init__(self,conditions=None):
         self.component_stack=['rootlevel']
         self.found_components=['rootlevel']
         self.found_variables = {'rootlevel':defaultdict(lambda :dict({'input':[],'output':[],'local':[]}))}
         self.variable_versions = defaultdict(lambda : defaultdict(lambda: []))
+        self.conditions=conditions
     def pre_order(self,obj):
         if isinstance(obj, DddComponent):
             self.component_stack.append(obj)
@@ -66,13 +69,16 @@ class CheckVisitor:
 #             for v in obj.variablelist:
 #                 self.found_variables[self.component_stack[-1]][v.name][v.scope].append(self.component_stack[-1])
         elif isinstance(obj, DddVariableDecl):
-            #raise Exception
-            self.variable_versions[obj.definition.name][obj.definition.getHash()].append(self.component_stack[-1])
-            #add variable once at its component (interface variables)
-            conversion = {'input':'output','output':'input'}
-            #self.found_variables[self.component_stack[-1]][obj.definition.name][conversion.get(obj.scope,obj.scope)].append(self.component_stack[-1])
-            #add variable also at its "grandparent"
-            self.found_variables[self.component_stack[-2]][obj.definition.name][obj.scope].append(self.component_stack[-1])
+            c = self.conditions.get(obj.condition,None)
+            if (obj.condition and c==True) or not obj.condition:
+                #raise Exception
+                self.variable_versions[obj.definition.name][obj.definition.getHash()].append(self.component_stack[-1])
+                #add variable once at its component (interface variables)
+                conversion = {'input':'output','output':'input'}
+                #self.found_variables[self.component_stack[-1]][obj.definition.name][conversion.get(obj.scope,obj.scope)].append(self.component_stack[-1])
+                #add variable also at its "grandparent"
+                self.found_variables[self.component_stack[-2]][obj.definition.name][obj.scope].append(self.component_stack[-1])
+            
     def in_order(self,obj):
         pass
     def post_order(self,obj):

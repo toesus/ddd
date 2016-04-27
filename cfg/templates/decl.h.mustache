@@ -10,18 +10,12 @@
 /*@#groups@*/
 /* Start Group /*@groupname@*/ */
 /*@#definitions@*/
-/*@#output@*/#if /*@.@*/
-/*@/output@*/
+/*@#decl_condition@*/#if /*@.@*/
+/*@/decl_condition@*/
 extern /*@ definition.datatype.source_name @*/ /*@ definition.name @*//*@#definition.dimensions@*/[/*@.@*/]/*@/definition.dimensions@*/;
-/*@#output@*/
-#else
-/*@#input@*/
-#if (/*@.@*/)
-#error Input condition activated while output condition deactivated!
+/*@#decl_condition@*/
 #endif
-/*@/input@*/
-#endif
-/*@/output@*/
+/*@/decl_condition@*/
 /*@/definitions@*/
 /* End Group /*@groupname@*/ */
 /*@/groups@*/

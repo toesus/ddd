@@ -3,7 +3,7 @@
 
 import sys
 import os
-
+import json
 from argparse import ArgumentParser
 
 from ddd.db import DB
@@ -19,6 +19,7 @@ def main():
     parser_c.add_argument(dest="dddfile", help="Filename of .ddd to add", metavar="dddfile", nargs='+')
     parser_c.add_argument('--config',help='Config file', nargs='?')
     parser_c.add_argument('--output',help='Output Filename', nargs='?')
+    parser_c.add_argument('--conditions',help='Condition Filename', nargs='?')
     
     parser_v = subparsers.add_parser('view', help='Display the DDD Repository in a html page')
     parser_v.add_argument('--hash',help='Hash of the Object to check', nargs='?')
@@ -52,13 +53,16 @@ def main():
         tmp = []
         for f in args.dddfile:
             tmp.append(db.open(f))
-        print tmp
+        
         c = db.open(args.config)
         proj = DddProject(components=tmp,config=c)
-        
-        status=db.check(proj)
+        print args.conditions
+        with open(args.conditions,'r')as fp:
+            cond = json.load(fp)
+        status=db.check(proj,conditions=cond)
         if not status:
             db.dump(proj,args.output)
+        db.export_conditions(proj, 'conditions.dummy')
     elif args.subcommand=='view':
         db.view(name=args.name)
     elif args.subcommand=='commit':
