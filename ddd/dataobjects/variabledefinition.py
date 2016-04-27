@@ -9,7 +9,7 @@ from datatype import DddDatatype
     
 @dddobject('definition')
 class DddVariableDef(DataObject):
-    def __init__(self,name='',datatype=None,min=0,max=0,displayformat='',dimensions=None):
+    def __init__(self,name='',datatype=None,min=0,max=0,displayformat='',dimensions=None,calibrationaccess='none'):
         self.name=name
         if not datatype:
             self.datatype=DddDatatype()
@@ -19,6 +19,7 @@ class DddVariableDef(DataObject):
         self.max=max
         self.displayformat=displayformat
         self.dimensions=dimensions
+        self.calibrationaccess=calibrationaccess
         DataObject.__init__(self)
         
     def getJsonDict(self,hashed=False):
@@ -28,7 +29,8 @@ class DddVariableDef(DataObject):
                     'max':self.max,
                     'displayformat':self.displayformat,
                     'dimensions':self.dimensions,
-                    'datatype':self.datatype})
+                    'datatype':self.datatype,
+                    'calibrationaccess':self.calibrationaccess})
         return tmp
     
     def accept(self,visitor):
